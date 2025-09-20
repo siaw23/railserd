@@ -23,8 +23,8 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="<%= content_for?(:body_class) ? (yield :body_class) : "" %>">
+    <main class="<%= content_for?(:main_class) ? (yield :main_class) : "container mx-auto mt-28 px-5 flex" %>">
       <%= yield %>
     </main>
   </body>

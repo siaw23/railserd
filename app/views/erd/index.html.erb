@@ -1,0 +1,168 @@
+<% content_for :body_class do %>h-screen<% end %>
+<% content_for :main_class do %>h-screen p-0 m-0 max-w-none<% end %>
+<div class="h-full w-full bg-gray-50" data-controller="erd" data-action="input->erd#debouncedParse">
+  <!-- Main Content -->
+  <div class="flex h-full">
+    <!-- Schema Input Panel -->
+    <div class="flex-none w-2/5 bg-gray-900 border-r border-gray-300 flex flex-col">
+      <div class="px-4 py-3 bg-gray-800 border-b border-gray-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-200">Rails ERD Generator</h2>
+            <p class="text-xs text-gray-400 mt-1">Paste your schema.rb content here</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <div class="h-2 w-2 bg-red-400 rounded-full animate-pulse"></div>
+            <span class="text-xs text-gray-400">Live Preview</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 relative">
+        <textarea
+          data-erd-target="input"
+          data-action="input->erd#debouncedParse paste->erd#debouncedParse"
+          placeholder="ActiveRecord::Schema.define(version: 2024_01_01_000000) do
+
+  create_table &quot;users&quot;, force: :cascade do |t|
+    t.string &quot;email&quot;, null: false
+    t.string &quot;name&quot;
+    t.timestamps
+  end
+
+  create_table &quot;posts&quot;, force: :cascade do |t|
+    t.string &quot;title&quot;
+    t.text &quot;content&quot;
+    t.references :user, foreign_key: true
+    t.timestamps
+  end
+
+end"
+          class="w-full h-full bg-transparent text-gray-100 placeholder-gray-500 font-mono text-sm leading-relaxed p-4 border-0 outline-none resize-none focus:ring-0"
+          spellcheck="false"
+        ></textarea>
+        <!-- Line numbers overlay could go here -->
+      </div>
+    </div>
+
+    <!-- ERD Visualization Panel -->
+    <div class="flex-1 bg-gray-50 flex flex-col">
+      <div class="px-4 py-3 bg-white border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-800">Entity Relationship Diagram</h2>
+            <p class="text-xs text-gray-500 mt-1">Interactive ERD visualization</p>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 text-xs text-gray-600">
+              <div class="flex items-center space-x-1">
+                <div class="h-2 w-2 bg-red-500 rounded-full"></div>
+                <span>Drag tables</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <div class="h-2 w-2 bg-blue-500 rounded-full"></div>
+                <span>Zoom & pan</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 relative overflow-hidden">
+        <svg data-erd-target="svg" class="w-full h-full block"></svg>
+        <!-- Empty state message -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" data-erd-target="emptyState">
+          <div class="text-center">
+            <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="text-sm font-medium text-gray-900 mb-2">No schema detected</h3>
+            <p class="text-sm text-gray-500">Paste your Rails schema.rb content in the left panel to generate the ERD</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* D3 ERD Styles with Red Theme */
+  .table {
+    cursor: move;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    transition: filter 0.2s ease;
+  }
+  .table:hover {
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.15));
+  }
+  .table-outline {
+    fill: white;
+    stroke: #e5e7eb;
+    stroke-width: 1;
+    rx: 8;
+    ry: 8;
+  }
+  .header {
+    fill: #dc2626;
+    rx: 8;
+    ry: 8;
+  }
+  .title {
+    fill: white;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  .row {
+    fill: white;
+  }
+  .row.alt {
+    fill: #fef2f2;
+  }
+  .cell-name {
+    fill: #1f2937;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, "Menlo", "Monaco", "Cascadia Code", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Code", "Droid Sans Mono", "Courier New", monospace;
+    font-weight: 500;
+  }
+  .cell-type {
+    fill: #6b7280;
+    font-size: 12px;
+    text-anchor: end;
+    font-family: ui-monospace, SFMono-Regular, "Menlo", "Monaco", "Cascadia Code", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Code", "Droid Sans Mono", "Courier New", monospace;
+  }
+  .link {
+    fill: none;
+    stroke: #ef4444;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    opacity: 0.8;
+  }
+  .cardmark {
+    font-size: 14px;
+    font-weight: 800;
+    fill: #dc2626;
+    pointer-events: none;
+    user-select: none;
+    stroke: white;
+    stroke-width: 3;
+    paint-order: stroke fill;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+
+  /* Custom scrollbar for textarea */
+  .font-mono::-webkit-scrollbar {
+    width: 8px;
+  }
+  .font-mono::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  .font-mono::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+  }
+  .font-mono::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+</style>
+
