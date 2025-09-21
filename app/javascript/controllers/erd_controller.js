@@ -233,12 +233,24 @@ export default class extends Controller {
       })
     })
 
-    const linkObjs = rels.map((r) => ({
-      ...r,
-      p: this.linkLayer.append("path").attr("class", "link"),
-      sLab: this.labelLayer.append("text").attr("class", "cardmark"),
-      eLab: this.labelLayer.append("text").attr("class", "cardmark")
-    }))
+    // Distinct colors for overlapping relationship lines
+    const linkColorPalette = [
+      "#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899",
+      "#06b6d4", "#14b8a6", "#84cc16", "#e11d48", "#0ea5e9", "#22c55e",
+      "#a855f7", "#f43f5e", "#f97316", "#eab308", "#38bdf8", "#34d399",
+      "#60a5fa", "#a3e635", "#fb923c", "#c084fc", "#fbbf24", "#4ade80"
+    ]
+
+    const linkObjs = rels.map((r, idx) => {
+      const color = linkColorPalette[idx % linkColorPalette.length]
+      return {
+        ...r,
+        color,
+        p: this.linkLayer.append("path").attr("class", "link").style("stroke", color),
+        sLab: this.labelLayer.append("text").attr("class", "cardmark").style("fill", color),
+        eLab: this.labelLayer.append("text").attr("class", "cardmark").style("fill", color)
+      }
+    })
 
     const OFFSET = 18
     const off = 10
