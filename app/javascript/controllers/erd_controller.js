@@ -3,7 +3,7 @@ import * as d3 from "d3"
 
 // Connects to data-controller="erd"
 export default class extends Controller {
-  static targets = ["input", "svg", "emptyState"]
+  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon"]
 
   connect() {
     this.root = d3.select(this.svgTarget).append("g")
@@ -15,6 +15,12 @@ export default class extends Controller {
     d3.select(this.svgTarget).call(this.zoom).on("dblclick.zoom", null)
 
     this._debounceTimer = null
+
+    // Restore left pane state
+    const saved = window.localStorage.getItem("erd:leftPane:collapsed")
+    if (saved === "true") {
+      this.collapsePane(true) // immediate, no animation on load
+    }
   }
 
   debouncedParse() {
@@ -63,6 +69,93 @@ export default class extends Controller {
   hideEmptyState() {
     if (this.hasEmptyStateTarget) {
       this.emptyStateTarget.style.display = "none"
+    }
+  }
+
+  // Sliding panel functionality
+  togglePane() {
+    const isCollapsed = this.leftPaneTarget.classList.contains('collapsed')
+    if (isCollapsed) {
+      this.expandPane()
+    } else {
+      this.collapsePane()
+    }
+  }
+
+  collapsePane(immediate = false) {
+    if (!this.hasLeftPaneTarget) return
+
+    const leftPane = this.leftPaneTarget
+    const rightPane = this.rightPaneTarget
+
+    // Add collapsed class for state tracking
+    leftPane.classList.add('collapsed')
+
+    // If immediate (on page load), disable transitions temporarily
+    if (immediate) {
+      leftPane.style.transition = 'none'
+      if (rightPane) rightPane.style.transition = 'none'
+    }
+
+    // Use GPU-accelerated transform for smooth animation
+    leftPane.style.transform = 'translate3d(-100%, 0, 0)'
+
+    // Adjust right pane to fill the space
+    if (rightPane) {
+      const leftPaneWidth = leftPane.offsetWidth
+      rightPane.style.marginLeft = `-${leftPaneWidth}px`
+    }
+
+    // Update icons
+    this.updateToggleIcons(true)
+
+    // Save state
+    window.localStorage.setItem("erd:leftPane:collapsed", "true")
+
+    // Re-enable transitions if they were disabled
+    if (immediate) {
+      setTimeout(() => {
+        leftPane.style.transition = ''
+        if (rightPane) rightPane.style.transition = ''
+      }, 50)
+    }
+  }
+
+  expandPane() {
+    if (!this.hasLeftPaneTarget) return
+
+    const leftPane = this.leftPaneTarget
+    const rightPane = this.rightPaneTarget
+
+    // Remove collapsed class
+    leftPane.classList.remove('collapsed')
+
+    // Use GPU-accelerated transform for smooth animation
+    leftPane.style.transform = 'translate3d(0, 0, 0)'
+
+    // Reset right pane margin
+    if (rightPane) {
+      rightPane.style.marginLeft = '0'
+    }
+
+    // Update icons
+    this.updateToggleIcons(false)
+
+    // Save state
+    window.localStorage.setItem("erd:leftPane:collapsed", "false")
+  }
+
+  updateToggleIcons(collapsed) {
+    if (this.hasPanelLeftIconTarget && this.hasPanelRightIconTarget) {
+      if (collapsed) {
+        // Show "expand" icon (panel-right)
+        this.panelLeftIconTarget.classList.add('hidden')
+        this.panelRightIconTarget.classList.remove('hidden')
+      } else {
+        // Show "collapse" icon (panel-left)
+        this.panelLeftIconTarget.classList.remove('hidden')
+        this.panelRightIconTarget.classList.add('hidden')
+      }
     }
   }
 

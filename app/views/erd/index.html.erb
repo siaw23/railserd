@@ -2,9 +2,11 @@
 <% content_for :main_class do %>h-screen p-0 m-0 max-w-none<% end %>
 <div class="h-full w-full bg-gray-50" data-controller="erd" data-action="input->erd#debouncedParse">
   <!-- Main Content -->
-  <div class="flex h-full">
+  <div class="flex h-full relative">
     <!-- Schema Input Panel -->
-    <div class="flex-none w-2/5 bg-gray-900 border-r border-gray-300 flex flex-col">
+    <div class="flex-none bg-gray-900 border-r border-gray-300 flex flex-col overflow-hidden"
+         data-erd-target="leftPane"
+         style="width: 40%; min-width: 320px; transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1); will-change: transform;">
       <div class="px-4 py-3 bg-gray-800 border-b border-gray-700">
         <div class="flex items-center justify-between">
           <div>
@@ -45,12 +47,31 @@ end"
     </div>
 
     <!-- ERD Visualization Panel -->
-    <div class="flex-1 bg-gray-50 flex flex-col">
+    <div class="flex-1 bg-gray-50 flex flex-col"
+         data-erd-target="rightPane"
+         style="transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);">
       <div class="px-4 py-3 bg-white border-b border-gray-200">
         <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-semibold text-gray-800">Entity Relationship Diagram</h2>
-            <p class="text-xs text-gray-500 mt-1">Interactive ERD visualization</p>
+          <div class="flex items-center space-x-3">
+            <!-- Toggle Panel Button -->
+            <button type="button"
+                    data-action="click->erd#togglePane"
+                    data-erd-target="toggleButton"
+                    class="inline-flex items-center p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors duration-150"
+                    title="Toggle schema panel">
+              <!-- Panel Left Icon (shown when panel is visible - indicates "hide panel") -->
+              <svg data-erd-target="panelLeftIcon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18-6-6 6-6"/>
+              </svg>
+              <!-- Panel Right Icon (shown when panel is hidden - indicates "show panel") -->
+              <svg data-erd-target="panelRightIcon" class="h-4 w-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
+            <div>
+              <h2 class="text-sm font-semibold text-gray-800">Entity Relationship Diagram</h2>
+              <p class="text-xs text-gray-500 mt-1">Interactive ERD visualization</p>
+            </div>
           </div>
           <div class="flex items-center space-x-4">
             <div class="flex items-center space-x-2 text-xs text-gray-600">
@@ -161,6 +182,17 @@ end"
   }
   .font-mono::-webkit-scrollbar-thumb:hover {
     background: #9ca3af;
+  }
+
+  /* Animation optimizations */
+  [data-erd-target="leftPane"] {
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+
+  [data-erd-target="leftPane"].collapsed {
+    pointer-events: none;
   }
 </style>
 
