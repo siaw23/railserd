@@ -191,7 +191,49 @@ export default class extends Controller {
       }
     }
 
-    const toPath = (pts) => pts.map((p, i) => (i ? `L${p.x},${p.y}` : `M${p.x},${p.y}`)).join(" ")
+    const toPathWithRoundedCorners = (pts, radius = 3) => {
+      if (pts.length < 3) {
+        // Not enough points for curves, use straight lines
+        return pts.map((p, i) => (i ? `L${p.x},${p.y}` : `M${p.x},${p.y}`)).join(" ")
+      }
+
+      let path = `M${pts[0].x},${pts[0].y}`
+
+      for (let i = 1; i < pts.length - 1; i++) {
+        const prev = pts[i - 1]
+        const curr = pts[i]
+        const next = pts[i + 1]
+
+        // Calculate distances to determine curve radius
+        const d1 = Math.sqrt((curr.x - prev.x) ** 2 + (curr.y - prev.y) ** 2)
+        const d2 = Math.sqrt((next.x - curr.x) ** 2 + (next.y - curr.y) ** 2)
+        const r = Math.min(radius, d1 / 2, d2 / 2)
+
+        if (r < 1) {
+          // Too small for a curve, use straight line
+          path += ` L${curr.x},${curr.y}`
+          continue
+        }
+
+        // Calculate curve start and end points
+        const ratio1 = r / d1
+        const ratio2 = r / d2
+        const curveStart = {
+          x: curr.x - (curr.x - prev.x) * ratio1,
+          y: curr.y - (curr.y - prev.y) * ratio1
+        }
+        const curveEnd = {
+          x: curr.x + (next.x - curr.x) * ratio2,
+          y: curr.y + (next.y - curr.y) * ratio2
+        }
+
+        path += ` L${curveStart.x},${curveStart.y} Q${curr.x},${curr.y} ${curveEnd.x},${curveEnd.y}`
+      }
+
+      // Add final point
+      path += ` L${pts[pts.length - 1].x},${pts[pts.length - 1].y}`
+      return path
+    }
 
     const updateLinks = () => {
       linkObjs.forEach((L) => {
@@ -201,7 +243,7 @@ export default class extends Controller {
         const p1 = anchorPoint(boxOf(A), sideA), p2 = anchorPoint(boxOf(B), sideB)
         const pts = manhattan(p1, p2, sideA, sideB)
 
-        L.p.attr("d", toPath(pts))
+        L.p.attr("d", toPathWithRoundedCorners(pts))
 
         const s0 = pts[0], s1 = pts[1]
         const eN = pts.length - 1, e0 = pts[eN - 1], e1 = pts[eN]
