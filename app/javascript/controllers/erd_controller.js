@@ -113,8 +113,16 @@ export default class extends Controller {
     gTable.append("rect").attr("class", "table-outline")
       .attr("width", (d) => d.w).attr("height", (d) => d.h)
 
-    gTable.append("rect").attr("class", "header")
-      .attr("width", (d) => d.w).attr("height", HDR_H)
+    // Header with rounded top corners only
+    function roundedTopRectPath(width, height, r) {
+      const w = width
+      const h = height
+      const rr = Math.min(r, w / 2, h)
+      return `M0,${rr} Q0,0 ${rr},0 H${w - rr} Q${w},0 ${w},${rr} V${h} H0 Z`
+    }
+
+    gTable.append("path").attr("class", "header")
+      .attr("d", (d) => roundedTopRectPath(d.w, HDR_H, 8))
 
     gTable.append("text").attr("class", "title")
       .attr("x", PADX).attr("y", HDR_H / 2 + 5).text((d) => d.id)
