@@ -204,13 +204,42 @@ export default class extends Controller {
 
     this.hideEmptyState()
 
-    // compute sizes
-    const PADX = 18, ROW_H = 28, HDR_H = 34, TYPE_W = 96, MIN_W = 260
+    // compute sizes using real text measurements to avoid overlap
+    const PADX = 18, ROW_H = 28, HDR_H = 34, MIN_W = 260, NAME_TYPE_GAP = 18
+
+    // Create an off-screen measuring layer inside the SVG
+    const measureLayer = d3.select(this.svgTarget)
+      .append("g")
+      .attr("transform", "translate(-10000,-10000)")
+      .attr("opacity", 0)
+      .attr("pointer-events", "none")
+
+    const measureTextWidth = (text, className) => {
+      const n = measureLayer.append("text").attr("class", className).text(text).node()
+      // getBBox works only when element is in the DOM and not display:none
+      const w = n.getBBox().width
+      n.remove()
+      return w
+    }
+
     tables.forEach((t) => {
-      const nameW = Math.max(...t.fields.map((f) => f[0].length), 2) * 7.2
-      t.w = Math.max(MIN_W, PADX * 2 + nameW + TYPE_W)
+      const titleW = measureTextWidth(t.id, "title")
+      let maxNameW = 0
+      let maxTypeW = 0
+      t.fields.forEach((f) => {
+        const nameW = measureTextWidth(String(f[0] ?? ""), "cell-name")
+        const typeW = measureTextWidth(String(f[1] ?? ""), "cell-type")
+        if (nameW > maxNameW) maxNameW = nameW
+        if (typeW > maxTypeW) maxTypeW = typeW
+      })
+
+      const contentW = Math.max(titleW, maxNameW + NAME_TYPE_GAP + maxTypeW)
+      t.w = Math.max(MIN_W, PADX + contentW + PADX)
       t.h = HDR_H + t.fields.length * ROW_H
     })
+
+    // Remove measurement layer now that sizing is computed
+    measureLayer.remove()
     const byId = Object.fromEntries(tables.map((t) => [t.id, t]))
 
     // --- Auto layout (client-side) only if server didn't provide coordinates
@@ -336,17 +365,15 @@ export default class extends Controller {
     let vbH = Math.ceil(heightNeeded)
     const svgSel = d3.select(this.svgTarget)
     svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
-    // Also set explicit size so the canvas can grow; the container is scrollable
-    svgSel.attr("width", vbW).attr("height", vbH)
+    // Don't set explicit width/height; let CSS/container manage scroll without layout shifts
 
     // Center the rendered ERD within the scroll container
     const centerScroll = () => {
       const container = this.svgTarget.parentElement
       if (!container) return
-      const sw = this.svgTarget.width?.baseVal?.value || this.svgTarget.clientWidth || vbW
-      const sh = this.svgTarget.height?.baseVal?.value || this.svgTarget.clientHeight || vbH
-      const left = Math.max(0, (sw - container.clientWidth) / 2)
-      const top = Math.max(0, (sh - container.clientHeight) / 2)
+      // Use viewBox dimensions for centering when not setting explicit width/height
+      const left = Math.max(0, (vbW - container.clientWidth) / 2)
+      const top = Math.max(0, (vbH - container.clientHeight) / 2)
       container.scrollLeft = left
       container.scrollTop = top
     }
@@ -354,11 +381,11 @@ export default class extends Controller {
 
     // Grow-only canvas expansion to robustly avoid clipping when links/labels extend
     const ensureCovers = (minX, minY, maxX, maxY, pad = 20) => {
-      const right = maxX + pad
-      const bottom = maxY + pad
+      const right = Math.ceil(maxX + pad)
+      const bottom = Math.ceil(maxY + pad)
       let changed = false
-      if (right > vbX + vbW) { vbW = Math.ceil(right - vbX); changed = true }
-      if (bottom > vbY + vbH) { vbH = Math.ceil(bottom - vbY); changed = true }
+      if (right > vbX + vbW) { vbW = right - vbX; changed = true }
+      if (bottom > vbY + vbH) { vbH = bottom - vbY; changed = true }
       if (changed) {
         svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
         svgSel.attr("width", vbW).attr("height", vbH)
