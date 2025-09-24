@@ -2,12 +2,12 @@
 service: railserd
 
 # Name of the container image.
-image: your-user/railserd
+image: siaw23/railserd
 
 # Deploy to these servers.
 servers:
   web:
-    - 192.168.0.1
+    - 5.78.100.135
   # job:
   #   hosts:
   #     - 192.168.0.1
@@ -19,17 +19,19 @@ servers:
 # Note: If using Cloudflare, set encryption mode in SSL/TLS setting to "Full" to enable CF-to-app encryption.
 proxy:
   ssl: true
-  host: app.example.com
+  host: railserd.com
 
 # Credentials for your image host.
 registry:
   # Specify the registry server, if you're not using Docker Hub
   # server: registry.digitalocean.com / ghcr.io / ...
-  username: your-user
+  username: siaw23
 
+  # TODO: Move this to ENV
   # Always use an access token rather than real password when possible.
   password:
-    - KAMAL_REGISTRY_PASSWORD
+    - "cnq8wgq7qya*bpg.FCH"
+    # - KAMAL_REGISTRY_PASSWORD
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
