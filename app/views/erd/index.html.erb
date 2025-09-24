@@ -23,8 +23,16 @@
         <textarea
           data-erd-target="input"
           data-action="input->erd#debouncedParse paste->erd#debouncedParse"
-          placeholder="ActiveRecord::Schema.define(version: 2024_01_01_000000) do
+          placeholder="
+# This app uses no database and does not store your schema.
+# No sessions, no persistence—your schema.rb remains private.
+#
+# BTW, I'm a Rails developer with 11 years of experience
+# and available for Ruby/Rails projects.
+# Let's talk: mensah.consultancy@gmail.com
 
+
+ActiveRecord::Schema.define(version: 2024_01_01_000000) do
   create_table &quot;users&quot;, force: :cascade do |t|
     t.string &quot;email&quot;, null: false
     t.string &quot;name&quot;
@@ -37,8 +45,12 @@
     t.references :user, foreign_key: true
     t.timestamps
   end
+end
 
-end"
+
+
+
+"
           class="w-full h-full bg-transparent text-gray-100 placeholder-gray-500 font-mono text-sm leading-relaxed p-4 border-0 outline-none resize-none focus:ring-0"
           spellcheck="false"
         ></textarea>

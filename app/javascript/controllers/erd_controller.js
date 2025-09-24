@@ -105,9 +105,18 @@ export default class extends Controller {
     if (immediate) {
       leftPane.style.transition = 'none'
       if (rightPane) rightPane.style.transition = 'none'
+    } else {
+      // Make sure transitions are defined so the animation runs
+      if (!leftPane.style.transition || leftPane.style.transition === 'none') {
+        leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+      }
+      if (rightPane && (!rightPane.style.transition || rightPane.style.transition === 'none')) {
+        rightPane.style.transition = 'margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+      }
     }
 
     // Use GPU-accelerated transform for smooth animation
+    void leftPane.offsetWidth // reflow to ensure transition triggers
     leftPane.style.transform = 'translate3d(-100%, 0, 0)'
 
     // Adjust right pane to fill the space
@@ -143,10 +152,17 @@ export default class extends Controller {
     leftPane.classList.remove('collapsed')
 
     // Use GPU-accelerated transform for smooth animation
+    if (!leftPane.style.transition || leftPane.style.transition === 'none') {
+      leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+    }
+    void leftPane.offsetWidth
     leftPane.style.transform = 'translate3d(0, 0, 0)'
 
     // Reset right pane margin
     if (rightPane) {
+      if (!rightPane.style.transition || rightPane.style.transition === 'none') {
+        rightPane.style.transition = 'margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+      }
       rightPane.style.marginLeft = '0'
     }
 
@@ -310,12 +326,14 @@ export default class extends Controller {
       return { minX, minY, maxX, maxY }
     })()
     const margin = 60
-    const widthNeeded = bounds.maxX - bounds.minX + margin * 2
-    const heightNeeded = bounds.maxY - bounds.minY + margin * 2
-    const vbX = Math.floor(bounds.minX - margin)
-    const vbY = Math.floor(bounds.minY - margin)
-    const vbW = Math.ceil(widthNeeded)
-    const vbH = Math.ceil(heightNeeded)
+    const safetyX = 140 // extra room on right/left so paths/labels don't get clipped
+    const safetyY = 80  // extra room top/bottom
+    const widthNeeded = bounds.maxX - bounds.minX + margin * 2 + safetyX
+    const heightNeeded = bounds.maxY - bounds.minY + margin * 2 + safetyY
+    let vbX = Math.floor(bounds.minX - margin)
+    let vbY = Math.floor(bounds.minY - margin)
+    let vbW = Math.ceil(widthNeeded)
+    let vbH = Math.ceil(heightNeeded)
     const svgSel = d3.select(this.svgTarget)
     svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
     // Also set explicit size so the canvas can grow; the container is scrollable
@@ -333,6 +351,19 @@ export default class extends Controller {
       container.scrollTop = top
     }
     requestAnimationFrame(centerScroll)
+
+    // Grow-only canvas expansion to robustly avoid clipping when links/labels extend
+    const ensureCovers = (minX, minY, maxX, maxY, pad = 20) => {
+      const right = maxX + pad
+      const bottom = maxY + pad
+      let changed = false
+      if (right > vbX + vbW) { vbW = Math.ceil(right - vbX); changed = true }
+      if (bottom > vbY + vbH) { vbH = Math.ceil(bottom - vbY); changed = true }
+      if (changed) {
+        svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
+        svgSel.attr("width", vbW).attr("height", vbH)
+      }
+    }
 
     // draw
     this.clear(false)
@@ -600,6 +631,12 @@ export default class extends Controller {
           updates.push(() => L.eLab.text(eText).attr("x", eMid.x + near).attr("y", eMid.y)
             .attr("text-anchor", right ? "end" : "start").attr("dominant-baseline", "central"))
         }
+        // Expand canvas if needed to avoid clipping
+        const minX = Math.min(...pts.map(p => p.x))
+        const minY = Math.min(...pts.map(p => p.y))
+        const maxX = Math.max(...pts.map(p => p.x))
+        const maxY = Math.max(...pts.map(p => p.y))
+        ensureCovers(minX, minY, maxX, maxY, 40)
       })
 
       updates.forEach(update => update())
