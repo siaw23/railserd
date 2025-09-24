@@ -24,6 +24,12 @@ Rails.application.configure do
   # Serve precompiled static assets (public/assets)
   config.public_file_server.enabled = ENV["RAILS_SERVE_STATIC_FILES"].present?
 
+  # Ensure assets are not compiled on-the-fly in production
+  config.assets.compile = false
+
+  # Use a real cache store instead of the null store
+  config.assets.digest = true
+
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 

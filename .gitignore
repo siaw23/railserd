@@ -42,3 +42,6 @@
 # Ignore key files for decrypting credentials and more.
 /config/credentials/*.key
 
+
+/app/assets/builds/*
+!/app/assets/builds/.keep
