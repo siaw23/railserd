@@ -30,8 +30,8 @@ registry:
   # TODO: Move this to ENV
   # Always use an access token rather than real password when possible.
   password:
-    - "cnq8wgq7qya*bpg.FCH"
-    # - KAMAL_REGISTRY_PASSWORD
+    # - "cnq8wgq7qya*bpg.FCH"
+    - KAMAL_REGISTRY_PASSWORD
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
