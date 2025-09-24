@@ -57,7 +57,7 @@ end"
             <button type="button"
                     data-action="click->erd#togglePane"
                     data-erd-target="toggleButton"
-                    class="inline-flex items-center p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors duration-150"
+                    class="inline-flex items-center p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors duration-150 btn-toggle"
                     title="Toggle schema panel">
               <!-- Panel Left Icon (shown when panel is visible - indicates "hide panel") -->
               <svg data-erd-target="panelLeftIcon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -87,8 +87,17 @@ end"
           </div>
         </div>
       </div>
-      <div class="flex-1 relative overflow-hidden">
-        <svg data-erd-target="svg" class="w-full h-full block"></svg>
+      <div class="flex-1 relative overflow-auto">
+        <svg data-erd-target="svg" class="block"></svg>
+        <!-- Zoom Controls -->
+        <div class="fixed bottom-4 right-4 flex flex-row gap-2 z-50">
+          <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  data-action="click->erd#zoomIn">+
+          </button>
+          <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  data-action="click->erd#zoomOut">-
+          </button>
+        </div>
         <!-- Empty state message -->
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" data-erd-target="emptyState">
           <div class="text-center">
@@ -154,7 +163,8 @@ end"
     fill: none;
     stroke: #ef4444;
     stroke-width: 2.5;
-    stroke-linecap: round;
+    stroke-linecap: butt; /* avoid endcap dots at anchors */
+    stroke-linejoin: round;
     opacity: 0.8;
   }
   .cardmark {
@@ -193,6 +203,18 @@ end"
 
   [data-erd-target="leftPane"].collapsed {
     pointer-events: none;
+  }
+</style>
+<style>
+  .btn-toggle {
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms, color 200ms;
+    will-change: transform;
+  }
+  .btn-toggle.collapsed {
+    transform: rotate(180deg) scale(1.05);
+  }
+  .btn-toggle:hover {
+    transform: translateY(-1px);
   }
 </style>
 

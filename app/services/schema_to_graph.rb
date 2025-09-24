@@ -14,16 +14,13 @@ class SchemaToGraph
       # Fallback to eval-based shim if simple parser misses features
       evaluate_schema!
     end
-    nodes = @tables.map do |name, t|
-      {
-        id: name,
-        # you can seed positions if you like; omitted = auto initial layout on load
-        fields: t[:columns].map { |c| [c[:name], c[:type]] }
-      }
-    end
+    nodes = @tables.map { |name, t| { id: name, fields: t[:columns].map { |c| [c[:name], c[:type]] } } }
 
     # Convert FK to 1:* (from = many, to = one)
     links = @fks.map { |fk| { from: fk[:from], to: fk[:to], fromCard: "many", toCard: "1" } }.uniq
+
+    # Compute a deterministic server-side layout so the client doesn't have to
+    layout_nodes!(nodes, links)
 
     { nodes: nodes, links: links }
   end
@@ -98,6 +95,119 @@ class SchemaToGraph
       t.start_with?("t.index", "add_index", "t.check_constraint", "check_constraint")
     }.join
     s
+  end
+
+  # --- Simple, fast layout to offload heavy work from the browser ---------------------------
+  def layout_nodes!(nodes, links)
+    return if nodes.empty?
+
+    # Estimate box sizes similar to the JS renderer (keep numbers in sync if updated there)
+    padx = 16.0
+    row_h = 26.0
+    hdr_h = 30.0
+    type_w = 82.0
+    min_w = 240.0
+
+    nodes.each do |n|
+      max_name = n[:fields].map { |f| (f[0] || '').to_s.length }.max || 2
+      name_w = [max_name, 2].max * 7.2
+      n[:w] = [min_w, padx * 2 + name_w + type_w].max
+      n[:h] = hdr_h + (n[:fields].length * row_h)
+    end
+
+    # Golden-angle (phyllotaxis) spiral layout: evenly spread in all directions
+    golden = 2.399963229728653
+    avg_dim = nodes.map { |n| [n[:w], n[:h]].max }.sum / [nodes.length, 1].max
+    c = (avg_dim * 0.6) + 60.0 # radial step constant – compact but with breathing room
+    nodes.each_with_index do |n, i|
+      r = c * Math.sqrt(i + 1)
+      ang = i * golden
+      cx = Math.cos(ang) * r
+      cy = Math.sin(ang) * r
+      n[:x] = cx - n[:w] / 2.0
+      n[:y] = cy - n[:h] / 2.0
+    end
+
+    # Spatial hashing separation to remove any residual overlaps
+    padding = 24.0
+    bin = (avg_dim + 40.0).to_i
+    iterations = [[(Math.sqrt(nodes.length) * 2).to_i, 5].max, 12].min
+    iterations.times do
+      buckets = Hash.new { |h, k| h[k] = [] }
+      nodes.each_with_index do |n, idx|
+        gx0 = (n[:x] / bin).floor
+        gy0 = (n[:y] / bin).floor
+        gx1 = ((n[:x] + n[:w]) / bin).floor
+        gy1 = ((n[:y] + n[:h]) / bin).floor
+        (gy0..gy1).each { |gy| (gx0..gx1).each { |gx| buckets[[gx, gy]] << idx } }
+      end
+
+      moved = false
+      nodes.each_with_index do |a, i|
+        gx0 = (a[:x] / bin).floor
+        gy0 = (a[:y] / bin).floor
+        (gy0 - 1..gy0 + 1).each do |gy|
+          (gx0 - 1..gx0 + 1).each do |gx|
+            (buckets[[gx, gy]] || []).each do |j|
+              next if j <= i
+              b = nodes[j]
+              next unless rects_overlap?(a, b, padding)
+              ax = a[:x] + a[:w] / 2.0
+              ay = a[:y] + a[:h] / 2.0
+              bx = b[:x] + b[:w] / 2.0
+              by = b[:y] + b[:h] / 2.0
+              dx = ax - bx
+              dy = ay - by
+              dx = 0.01 if dx.zero? && dy.zero?
+              len = Math.sqrt(dx * dx + dy * dy)
+              push = 8.0
+              ux = dx / len * push
+              uy = dy / len * push
+              a[:x] += ux
+              a[:y] += uy
+              b[:x] -= ux
+              b[:y] -= uy
+              moved = true
+            end
+          end
+        end
+      end
+      break unless moved
+    end
+
+    # Normalize to positive space with outer margin
+    min_x = nodes.map { |n| n[:x] }.min
+    min_y = nodes.map { |n| n[:y] }.min
+    margin = 120.0
+    dx = margin - min_x
+    dy = margin - min_y
+    nodes.each do |n|
+      n[:x] = (n[:x] + dx).round(2)
+      n[:y] = (n[:y] + dy).round(2)
+      n.delete(:w)
+      n.delete(:h)
+    end
+
+    # Normalize to positive space with outer margin
+    min_x = nodes.map { |n| n[:x] }.min
+    min_y = nodes.map { |n| n[:y] }.min
+    margin = 200.0
+    dx = margin - min_x
+    dy = margin - min_y
+    nodes.each do |n|
+      n[:x] = (n[:x] + dx).round(2)
+      n[:y] = (n[:y] + dy).round(2)
+      # Drop server size hints; client recomputes precise w/h for its fonts
+      n.delete(:w)
+      n.delete(:h)
+    end
+  end
+
+  def rects_overlap?(a, b, padding)
+    !(a[:x] + a[:w] + padding <= b[:x] ||
+      b[:x] + b[:w] + padding <= a[:x] ||
+      a[:y] + a[:h] + padding <= b[:y] ||
+      b[:y] + b[:h] + padding <= a[:y])
   end
 
   # The DSL shim that captures create_table/t.*/add_foreign_key
