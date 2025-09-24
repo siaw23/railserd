@@ -1,7 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
 
-// Connects to data-controller="erd"
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon"]
 
@@ -14,7 +13,6 @@ export default class extends Controller {
     this.zoom = d3.zoom().scaleExtent([0.2, 3]).on("zoom", (e) => this.root.attr("transform", e.transform))
     d3.select(this.svgTarget).call(this.zoom).on("dblclick.zoom", null)
 
-    // Initialize a large, fixed canvas (4x viewport) to avoid dynamic resizing during drag
     const container = this.svgTarget.parentElement
     if (container) {
       const multiplier = 4
@@ -25,24 +23,23 @@ export default class extends Controller {
       const svgSel = d3.select(this.svgTarget)
       svgSel.attr("viewBox", `0 0 ${canW} ${canH}`)
       svgSel.attr("width", canW).attr("height", canH)
-      // Center the scroll so content added later is viewed near the middle
       container.scrollLeft = Math.max(0, (canW - container.clientWidth) / 2)
       container.scrollTop = Math.max(0, (canH - container.clientHeight) / 2)
     }
 
     this._debounceTimer = null
 
-    // Track latest parse request to avoid rendering stale responses
+
     this._lastRequestId = 0
 
-    // Restore left pane state
+
     const saved = window.localStorage.getItem("erd:leftPane:collapsed")
     if (saved === "true") {
-      this.collapsePane(true) // immediate, no animation on load
+      this.collapsePane(true)
     }
   }
 
-  // Zoom controls
+
   zoomBy(factor) {
     const svgSel = d3.select(this.svgTarget)
     svgSel.transition().duration(200).call(this.zoom.scaleBy, factor)
@@ -72,7 +69,7 @@ export default class extends Controller {
       })
       const data = await res.json().catch(() => ({}))
 
-      // Ignore stale responses if newer requests were made after this one
+
       if (requestId !== this._lastRequestId) return
 
       if (!res.ok) {
@@ -81,7 +78,7 @@ export default class extends Controller {
         return
       }
 
-      // Start from a clean canvas for fresh schema pastes
+
       this.resetCanvas()
       this.render(data)
     } catch (err) {
@@ -102,7 +99,7 @@ export default class extends Controller {
     if (showEmpty) this.showEmptyState(); else this.hideEmptyState()
   }
 
-  // Fully rebuild SVG layers and reset zoom transform to ensure a clean re-render
+
   resetCanvas() {
     const svgSel = d3.select(this.svgTarget)
     svgSel.selectAll("*").remove()
@@ -127,7 +124,7 @@ export default class extends Controller {
     }
   }
 
-  // Sliding panel functionality
+
   togglePane() {
     const isCollapsed = this.leftPaneTarget.classList.contains('collapsed')
     if (isCollapsed) {
@@ -144,15 +141,15 @@ export default class extends Controller {
     const rightPane = this.rightPaneTarget
     const toggleBtn = this.hasToggleButtonTarget ? this.toggleButtonTarget : null
 
-    // Add collapsed class for state tracking
+
     leftPane.classList.add('collapsed')
 
-    // If immediate (on page load), disable transitions temporarily
+
     if (immediate) {
       leftPane.style.transition = 'none'
       if (rightPane) rightPane.style.transition = 'none'
     } else {
-      // Make sure transitions are defined so the animation runs
+
       if (!leftPane.style.transition || leftPane.style.transition === 'none') {
         leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
       }
@@ -161,24 +158,22 @@ export default class extends Controller {
       }
     }
 
-    // Use GPU-accelerated transform for smooth animation
     void leftPane.offsetWidth // reflow to ensure transition triggers
     leftPane.style.transform = 'translate3d(-100%, 0, 0)'
 
-    // Adjust right pane to fill the space
     if (rightPane) {
       const leftPaneWidth = leftPane.offsetWidth
       rightPane.style.marginLeft = `-${leftPaneWidth}px`
     }
 
-    // Update icons
+
     this.updateToggleIcons(true)
     if (toggleBtn) toggleBtn.classList.add('collapsed')
 
-    // Save state
+
     window.localStorage.setItem("erd:leftPane:collapsed", "true")
 
-    // Re-enable transitions if they were disabled
+
     if (immediate) {
       setTimeout(() => {
         leftPane.style.transition = ''
@@ -194,17 +189,17 @@ export default class extends Controller {
     const rightPane = this.rightPaneTarget
     const toggleBtn = this.hasToggleButtonTarget ? this.toggleButtonTarget : null
 
-    // Remove collapsed class
+
     leftPane.classList.remove('collapsed')
 
-    // Use GPU-accelerated transform for smooth animation
+
     if (!leftPane.style.transition || leftPane.style.transition === 'none') {
       leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
     }
     void leftPane.offsetWidth
     leftPane.style.transform = 'translate3d(0, 0, 0)'
 
-    // Reset right pane margin
+
     if (rightPane) {
       if (!rightPane.style.transition || rightPane.style.transition === 'none') {
         rightPane.style.transition = 'margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
@@ -212,22 +207,22 @@ export default class extends Controller {
       rightPane.style.marginLeft = '0'
     }
 
-    // Update icons
+
     this.updateToggleIcons(false)
     if (toggleBtn) toggleBtn.classList.remove('collapsed')
 
-    // Save state
+
     window.localStorage.setItem("erd:leftPane:collapsed", "false")
   }
 
   updateToggleIcons(collapsed) {
     if (this.hasPanelLeftIconTarget && this.hasPanelRightIconTarget) {
       if (collapsed) {
-        // Show "expand" icon (panel-right)
+
         this.panelLeftIconTarget.classList.add('hidden')
         this.panelRightIconTarget.classList.remove('hidden')
       } else {
-        // Show "collapse" icon (panel-left)
+
         this.panelLeftIconTarget.classList.remove('hidden')
         this.panelRightIconTarget.classList.add('hidden')
       }
@@ -250,10 +245,10 @@ export default class extends Controller {
 
     this.hideEmptyState()
 
-    // compute sizes using real text measurements to avoid overlap
+
     const PADX = 18, ROW_H = 28, HDR_H = 34, MIN_W = 260, NAME_TYPE_GAP = 18
 
-    // Create an off-screen measuring layer inside the SVG
+
     const measureLayer = d3.select(this.svgTarget)
       .append("g")
       .attr("transform", "translate(-10000,-10000)")
@@ -262,7 +257,7 @@ export default class extends Controller {
 
     const measureTextWidth = (text, className) => {
       const n = measureLayer.append("text").attr("class", className).text(text).node()
-      // getBBox works only when element is in the DOM and not display:none
+
       const w = n.getBBox().width
       n.remove()
       return w
@@ -284,13 +279,13 @@ export default class extends Controller {
       t.h = HDR_H + t.fields.length * ROW_H
     })
 
-    // Remove measurement layer now that sizing is computed
+
     measureLayer.remove()
     const byId = Object.fromEntries(tables.map((t) => [t.id, t]))
 
-    // --- Auto layout (client-side) only if server didn't provide coordinates
+
     const autoLayout = (nodes, links) => {
-      // Build force nodes with center-based coordinates for better physics
+
       const golden = 2.399963229728653 // golden angle (radians)
       const forceNodes = nodes.map((t, i) => {
         const r = 200 + i * 6
@@ -318,7 +313,7 @@ export default class extends Controller {
       const ticks = Math.min(1200, 30 * Math.sqrt(forceNodes.length))
       for (let i = 0; i < ticks; i++) sim.tick()
 
-      // Convert back to top-left coordinates and normalize to positive space
+
       let minX = Infinity, minY = Infinity
       forceNodes.forEach((n) => {
         const left = n.x - n.w / 2
@@ -341,7 +336,7 @@ export default class extends Controller {
       autoLayout(tables, rels)
     }
 
-    // --- Layout: separate overlapping boxes -------------------------------------------------
+
     const rectanglesOverlap = (a, b, padding = 0) => {
       return !(
         a.x + a.w + padding <= b.x ||
@@ -352,7 +347,7 @@ export default class extends Controller {
     }
 
     const resolveOverlaps = (nodes, padding = 24, maxIterations = 400) => {
-      // Simple iterative separation algorithm: push intersecting rectangles apart
+
       for (let iter = 0; iter < maxIterations; iter++) {
         let movedAny = false
         for (let i = 0; i < nodes.length; i++) {
@@ -386,13 +381,13 @@ export default class extends Controller {
       }
     }
 
-    // Run initial de-overlap pass
-    // If client laid out, run a short repel pass to resolve any residual overlaps
+
+
     if (!tables.every((t) => typeof t.x === "number" && typeof t.y === "number")) {
       resolveOverlaps(tables, 28, 200)
     }
 
-    // Measure content bounds for initial centering only (canvas is fixed size)
+
     const bounds = (() => {
       const minX = Math.min(...tables.map((n) => n.x))
       const minY = Math.min(...tables.map((n) => n.y))
@@ -400,7 +395,7 @@ export default class extends Controller {
       const maxY = Math.max(...tables.map((n) => n.y + n.h))
       return { minX, minY, maxX, maxY }
     })()
-    // Re-center scroll to the content inside the fixed canvas
+
     const centerScroll = () => {
       const container = this.svgTarget.parentElement
       if (!container) return
@@ -413,10 +408,10 @@ export default class extends Controller {
     }
     requestAnimationFrame(centerScroll)
 
-    // draw
+
     this.clear(false)
 
-    // Define drag handlers before using them
+
     const self = this
     function dragstart(event, d) { d3.select(this).raise() }
     let rafPending = false
@@ -429,7 +424,7 @@ export default class extends Controller {
       }
     }
     function dragend(event, d) {
-      // Keep the layout stable: do not auto-resolve overlaps or recenter/reflow the canvas
+
       gTable.attr("transform", (dd) => `translate(${dd.x},${dd.y})`)
       updateLinks()
     }
@@ -444,7 +439,7 @@ export default class extends Controller {
     gTable.append("rect").attr("class", "table-outline")
       .attr("width", (d) => d.w).attr("height", (d) => d.h)
 
-    // Header with rounded top corners only
+
     function roundedTopRectPath(width, height, r) {
       const w = width
       const h = height
@@ -471,7 +466,7 @@ export default class extends Controller {
       })
     })
 
-    // Distinct colors for overlapping relationship lines
+
     const linkColorPalette = [
       "#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899",
       "#06b6d4", "#14b8a6", "#84cc16", "#e11d48", "#0ea5e9", "#22c55e",
@@ -509,7 +504,7 @@ export default class extends Controller {
       }
     }
 
-    // Slot-based anchors to avoid merging multiple edges into one line on a side
+
     const anchorPointWithSlot = (box, side, slotIndex, totalSlots) => {
       const edgePadding = 10
       if (totalSlots <= 1) return anchorPoint(box, side)
@@ -558,12 +553,12 @@ export default class extends Controller {
         const a = res[res.length - 1]
         const b = pts[i]
         const c = pts[i + 1]
-        // Preserve the first joint next to the source and the last joint next to the target
+
         if (i === 1 || i === pts.length - 2) { res.push(b); continue }
         const abH = a.y === b.y, bcH = b.y === c.y
         const abV = a.x === b.x, bcV = b.x === c.x
         if ((abH && bcH) || (abV && bcV)) {
-          // b is redundant
+
           continue
         }
         res.push(b)
@@ -580,7 +575,7 @@ export default class extends Controller {
 
     const toPathWithRoundedCorners = (pts, radius = 3) => {
       if (pts.length < 3) {
-        // Not enough points for curves, use straight lines
+
         return pts.map((p, i) => (i ? `L${p.x},${p.y}` : `M${p.x},${p.y}`)).join(" ")
       }
 
@@ -591,18 +586,18 @@ export default class extends Controller {
         const curr = pts[i]
         const next = pts[i + 1]
 
-        // Calculate distances to determine curve radius
+
         const d1 = Math.sqrt((curr.x - prev.x) ** 2 + (curr.y - prev.y) ** 2)
         const d2 = Math.sqrt((next.x - curr.x) ** 2 + (next.y - curr.y) ** 2)
         const r = Math.min(radius, d1 / 2, d2 / 2)
 
         if (r < 1) {
-          // Too small for a curve, use straight line
+
           path += ` L${curr.x},${curr.y}`
           continue
         }
 
-        // Calculate curve start and end points
+
         const ratio1 = r / d1
         const ratio2 = r / d2
         const curveStart = {
@@ -617,14 +612,14 @@ export default class extends Controller {
         path += ` L${curveStart.x},${curveStart.y} Q${curr.x},${curr.y} ${curveEnd.x},${curveEnd.y}`
       }
 
-      // Add final point
+
       path += ` L${pts[pts.length - 1].x},${pts[pts.length - 1].y}`
       return path
     }
 
     const updateLinks = () => {
       const updates = []
-      // First pass: compute side counts so we can assign slots
+
       const sideCounts = {}
       const sideUsed = {}
       const planned = []
@@ -679,13 +674,13 @@ export default class extends Controller {
           updates.push(() => L.eLab.text(eText).attr("x", eMid.x + near).attr("y", eMid.y)
             .attr("text-anchor", right ? "end" : "start").attr("dominant-baseline", "central"))
         }
-        // Canvas is fixed; no dynamic resizing on drag/route updates
+
       })
 
       updates.forEach(update => update())
     }
 
-    // drag handlers declared above
+
 
     updateLinks()
   }
