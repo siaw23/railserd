@@ -42,6 +42,7 @@ env:
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     # No Solid Queue in Puma; no database used
     SOLID_QUEUE_IN_PUMA: false
+    RAILS_SERVE_STATIC_FILES: true
 
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
