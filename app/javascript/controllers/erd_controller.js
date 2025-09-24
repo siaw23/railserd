@@ -32,6 +32,9 @@ export default class extends Controller {
 
     this._debounceTimer = null
 
+    // Track latest parse request to avoid rendering stale responses
+    this._lastRequestId = 0
+
     // Restore left pane state
     const saved = window.localStorage.getItem("erd:leftPane:collapsed")
     if (saved === "true") {
@@ -54,23 +57,37 @@ export default class extends Controller {
   }
 
   async parse() {
-    const schema = this.inputTarget.value
-    if (!schema.trim()) {
+    try {
+      const schema = this.inputTarget.value
+      if (!schema.trim()) {
+        this.clear(true)
+        return
+      }
+
+      const requestId = ++this._lastRequestId
+      const res = await fetch("/erd/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.csrfToken() },
+        body: JSON.stringify({ schema })
+      })
+      const data = await res.json().catch(() => ({}))
+
+      // Ignore stale responses if newer requests were made after this one
+      if (requestId !== this._lastRequestId) return
+
+      if (!res.ok) {
+        console.error("Parse error", data)
+        this.clear(true)
+        return
+      }
+
+      // Start from a clean canvas for fresh schema pastes
+      this.resetCanvas()
+      this.render(data)
+    } catch (err) {
+      console.error("Unexpected error during parse/render", err)
       this.clear(true)
-      return
     }
-    const res = await fetch("/erd/parse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.csrfToken() },
-      body: JSON.stringify({ schema })
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      console.error("Parse error", data)
-      this.clear(true)
-      return
-    }
-    this.render(data)
   }
 
   csrfToken() {
@@ -83,6 +100,19 @@ export default class extends Controller {
     this.labelLayer.selectAll("*").remove()
     this.tableLayer.selectAll("*").remove()
     if (showEmpty) this.showEmptyState(); else this.hideEmptyState()
+  }
+
+  // Fully rebuild SVG layers and reset zoom transform to ensure a clean re-render
+  resetCanvas() {
+    const svgSel = d3.select(this.svgTarget)
+    svgSel.selectAll("*").remove()
+    this.root = svgSel.append("g")
+    this.linkLayer = this.root.append("g")
+    this.labelLayer = this.root.append("g")
+    this.tableLayer = this.root.append("g")
+    if (this.zoom) {
+      svgSel.call(this.zoom.transform, d3.zoomIdentity)
+    }
   }
 
   showEmptyState() {
