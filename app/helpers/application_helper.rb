@@ -1,6 +1,6 @@
 module ApplicationHelper
   def meta_title
-    content_for(:title).presence || "Railserd"
+    content_for(:title).presence || "Rails ERD Generator"
   end
 
   def meta_description
