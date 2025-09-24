@@ -14,6 +14,22 @@ export default class extends Controller {
     this.zoom = d3.zoom().scaleExtent([0.2, 3]).on("zoom", (e) => this.root.attr("transform", e.transform))
     d3.select(this.svgTarget).call(this.zoom).on("dblclick.zoom", null)
 
+    // Initialize a large, fixed canvas (4x viewport) to avoid dynamic resizing during drag
+    const container = this.svgTarget.parentElement
+    if (container) {
+      const multiplier = 4
+      const canW = Math.max(1, container.clientWidth * multiplier)
+      const canH = Math.max(1, container.clientHeight * multiplier)
+      this.canvasWidth = canW
+      this.canvasHeight = canH
+      const svgSel = d3.select(this.svgTarget)
+      svgSel.attr("viewBox", `0 0 ${canW} ${canH}`)
+      svgSel.attr("width", canW).attr("height", canH)
+      // Center the scroll so content added later is viewed near the middle
+      container.scrollLeft = Math.max(0, (canW - container.clientWidth) / 2)
+      container.scrollTop = Math.max(0, (canH - container.clientHeight) / 2)
+    }
+
     this._debounceTimer = null
 
     // Restore left pane state
@@ -346,7 +362,7 @@ export default class extends Controller {
       resolveOverlaps(tables, 28, 200)
     }
 
-    // Expand canvas/viewBox based on content bounds, so large schemas can spread out (no clamping)
+    // Measure content bounds for initial centering only (canvas is fixed size)
     const bounds = (() => {
       const minX = Math.min(...tables.map((n) => n.x))
       const minY = Math.min(...tables.map((n) => n.y))
@@ -354,43 +370,18 @@ export default class extends Controller {
       const maxY = Math.max(...tables.map((n) => n.y + n.h))
       return { minX, minY, maxX, maxY }
     })()
-    const margin = 60
-    const safetyX = 140 // extra room on right/left so paths/labels don't get clipped
-    const safetyY = 80  // extra room top/bottom
-    const widthNeeded = bounds.maxX - bounds.minX + margin * 2 + safetyX
-    const heightNeeded = bounds.maxY - bounds.minY + margin * 2 + safetyY
-    let vbX = Math.floor(bounds.minX - margin)
-    let vbY = Math.floor(bounds.minY - margin)
-    let vbW = Math.ceil(widthNeeded)
-    let vbH = Math.ceil(heightNeeded)
-    const svgSel = d3.select(this.svgTarget)
-    svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
-    // Don't set explicit width/height; let CSS/container manage scroll without layout shifts
-
-    // Center the rendered ERD within the scroll container
+    // Re-center scroll to the content inside the fixed canvas
     const centerScroll = () => {
       const container = this.svgTarget.parentElement
       if (!container) return
-      // Use viewBox dimensions for centering when not setting explicit width/height
-      const left = Math.max(0, (vbW - container.clientWidth) / 2)
-      const top = Math.max(0, (vbH - container.clientHeight) / 2)
+      const contentCenterX = (bounds.minX + bounds.maxX) / 2
+      const contentCenterY = (bounds.minY + bounds.maxY) / 2
+      const left = Math.max(0, contentCenterX - container.clientWidth / 2)
+      const top = Math.max(0, contentCenterY - container.clientHeight / 2)
       container.scrollLeft = left
       container.scrollTop = top
     }
     requestAnimationFrame(centerScroll)
-
-    // Grow-only canvas expansion to robustly avoid clipping when links/labels extend
-    const ensureCovers = (minX, minY, maxX, maxY, pad = 20) => {
-      const right = Math.ceil(maxX + pad)
-      const bottom = Math.ceil(maxY + pad)
-      let changed = false
-      if (right > vbX + vbW) { vbW = right - vbX; changed = true }
-      if (bottom > vbY + vbH) { vbH = bottom - vbY; changed = true }
-      if (changed) {
-        svgSel.attr("viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`)
-        svgSel.attr("width", vbW).attr("height", vbH)
-      }
-    }
 
     // draw
     this.clear(false)
@@ -658,12 +649,7 @@ export default class extends Controller {
           updates.push(() => L.eLab.text(eText).attr("x", eMid.x + near).attr("y", eMid.y)
             .attr("text-anchor", right ? "end" : "start").attr("dominant-baseline", "central"))
         }
-        // Expand canvas if needed to avoid clipping
-        const minX = Math.min(...pts.map(p => p.x))
-        const minY = Math.min(...pts.map(p => p.y))
-        const maxX = Math.max(...pts.map(p => p.x))
-        const maxY = Math.max(...pts.map(p => p.y))
-        ensureCovers(minX, minY, maxX, maxY, 40)
+        // Canvas is fixed; no dynamic resizing on drag/route updates
       })
 
       updates.forEach(update => update())
