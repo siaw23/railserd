@@ -8,7 +8,7 @@ module ApplicationHelper
   end
 
   def meta_image_url
-    request.base_url + "/railserd_com_transform_schema_rb_to_erd.png"
+    image_url("railserd_com_transform_schema_rb_to_erd.png")
   end
 
   def meta_url
