@@ -51,7 +51,7 @@ COPY . .
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
 # Build Tailwind CSS explicitly, then precompile assets for production without requiring secret RAILS_MASTER_KEY
-RUN ./bin/rails tailwindcss:build && \
+RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails tailwindcss:build && \
     SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
