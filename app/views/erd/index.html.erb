@@ -23,15 +23,16 @@
         <textarea
           data-erd-target="input"
           data-action="input->erd#debouncedParse paste->erd#debouncedParse"
-          placeholder="
-# This app uses no database and does not store your schema.
-# No sessions, no persistence—your schema.rb remains private.
+          placeholder="# This app uses no database and does not store your schema.
+# No sessions, no persistence. Your schema.rb remains private.
 #
-# BTW, I'm a Rails developer with 11 years of experience
-# and available for Ruby/Rails projects.
+# BTW, I'm a freelance Snr. Rails developer
+# with 11 years of experience.
+# Available for Ruby/Rails work.
 # Let's talk: mensah.consultancy@gmail.com
 
 
+# Paste your schema.rb content in this pane:
 ActiveRecord::Schema.define(version: 2024_01_01_000000) do
   create_table &quot;users&quot;, force: :cascade do |t|
     t.string &quot;email&quot;, null: false
@@ -89,12 +90,9 @@ end
             <div class="flex items-center space-x-2 text-xs text-gray-600">
               <div class="flex items-center space-x-1">
                 <div class="h-2 w-2 bg-red-500 rounded-full"></div>
-                <span>Drag tables</span>
+                <span>Drag, zoom & pan</span>
               </div>
-              <div class="flex items-center space-x-1">
-                <div class="h-2 w-2 bg-blue-500 rounded-full"></div>
-                <span>Zoom & pan</span>
-              </div>
+
             </div>
           </div>
         </div>
@@ -114,9 +112,7 @@ end
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none" data-erd-target="emptyState">
           <div class="text-center">
             <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-              </svg>
+              <i data-lucide="file-text" class="h-12 w-12"></i>
             </div>
             <h3 class="text-sm font-medium text-gray-900 mb-2">No schema detected</h3>
             <p class="text-sm text-gray-500">Paste your Rails schema.rb content in the left panel to generate the ERD</p>
