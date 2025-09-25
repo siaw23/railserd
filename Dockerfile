@@ -32,7 +32,10 @@ FROM base AS build
 
 # Install packages needed to build gems
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config curl gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
+    npm install -g yarn && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Install application gems
@@ -51,7 +54,7 @@ COPY . .
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
 # Build Tailwind CSS explicitly, append to application.css, then precompile assets for production
-RUN npm install --no-audit --no-fund --no-optional && \
+RUN yarn install --non-interactive && \
     yarn build && \
     SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
