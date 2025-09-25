@@ -43,6 +43,7 @@
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_include_tag "application", defer: true, "data-turbo-track": "reload" %>
+    <!-- Mobile block handled server-side in ApplicationController -->
   </head>
 
   <body class="<%= content_for?(:body_class) ? (yield :body_class) : "" %>">
