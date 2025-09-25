@@ -51,9 +51,7 @@ COPY . .
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
 # Build Tailwind CSS explicitly, append to application.css, then precompile assets for production
-RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails tailwindcss:build && \
-    cat app/assets/builds/tailwind.css >> app/assets/stylesheets/application.css && \
-    npm install --no-audit --no-fund --no-optional && \
+RUN npm install --no-audit --no-fund --no-optional && \
     yarn build && \
     SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
