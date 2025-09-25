@@ -1,9 +1,1 @@
-# Pin npm packages by running ./bin/importmap
-
-pin "application"
-pin "@hotwired/turbo-rails", to: "turbo.min.js"
-pin "@hotwired/stimulus", to: "stimulus.min.js"
-pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
-pin_all_from "app/javascript/controllers", under: "controllers"
-pin "d3", to: "https://cdn.jsdelivr.net/npm/d3@7/+esm"
-pin "lucide", to: "https://cdn.jsdelivr.net/npm/lucide@latest/+esm"
+# Importmap is no longer used; switched to esbuild bundling.

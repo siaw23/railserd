@@ -1,3 +1,4 @@
-import { application } from "controllers/application"
-import { eagerLoadControllersFrom } from "@hotwired/stimulus-loading"
-eagerLoadControllersFrom("controllers", application)
+import { application } from "./application"
+import ErdController from "./erd_controller"
+
+application.register("erd", ErdController)
