@@ -15,7 +15,7 @@ export default class extends Controller {
 
     const container = this.svgTarget.parentElement
     if (container) {
-      const multiplier = 4
+      const multiplier = 1
       const canW = Math.max(1, container.clientWidth * multiplier)
       const canH = Math.max(1, container.clientHeight * multiplier)
       this.canvasWidth = canW
@@ -37,6 +37,9 @@ export default class extends Controller {
     if (saved === "true") {
       this.collapsePane(true)
     }
+
+    // Ensure empty state shows on initial load before any parsing
+    this.showEmptyState()
   }
 
 
@@ -396,17 +399,23 @@ export default class extends Controller {
       return { minX, minY, maxX, maxY }
     })()
 
-    const centerScroll = () => {
+    const fitToViewport = () => {
       const container = this.svgTarget.parentElement
       if (!container) return
-      const contentCenterX = (bounds.minX + bounds.maxX) / 2
-      const contentCenterY = (bounds.minY + bounds.maxY) / 2
-      const left = Math.max(0, contentCenterX - container.clientWidth / 2)
-      const top = Math.max(0, contentCenterY - container.clientHeight / 2)
-      container.scrollLeft = left
-      container.scrollTop = top
+      const contentW = Math.max(1, bounds.maxX - bounds.minX)
+      const contentH = Math.max(1, bounds.maxY - bounds.minY)
+      const pad = 40
+      const viewW = Math.max(1, container.clientWidth - pad * 2)
+      const viewH = Math.max(1, container.clientHeight - pad * 2)
+      const rawScale = Math.min(viewW / contentW, viewH / contentH)
+      const [minScale, maxScale] = this.zoom.scaleExtent()
+      const scale = Math.max(minScale, Math.min(maxScale, rawScale))
+      const tx = (container.clientWidth - contentW * scale) / 2 - bounds.minX * scale
+      const ty = (container.clientHeight - contentH * scale) / 2 - bounds.minY * scale
+      const svgSel = d3.select(this.svgTarget)
+      svgSel.call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
     }
-    requestAnimationFrame(centerScroll)
+    requestAnimationFrame(fitToViewport)
 
 
     this.clear(false)

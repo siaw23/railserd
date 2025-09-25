@@ -1,6 +1,6 @@
 <% content_for :body_class do %>h-screen<% end %>
 <% content_for :main_class do %>h-screen p-0 m-0 max-w-none<% end %>
-<div class="h-full w-full bg-gray-50" data-controller="erd" data-action="input->erd#debouncedParse">
+<div class="h-full w-full bg-gray-50" data-controller="erd">
   <!-- Main Content -->
   <div class="flex h-full relative">
     <!-- Schema Input Panel -->
@@ -61,7 +61,7 @@ end
     </div>
 
     <!-- ERD Visualization Panel -->
-    <div class="flex-1 bg-gray-50 flex flex-col"
+    <div class="flex-1 bg-gray-50 flex flex-col relative"
          data-erd-target="rightPane"
          style="transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);">
       <div class="px-4 py-3 bg-white border-b border-gray-200">
@@ -101,15 +101,16 @@ end
                   data-action="click->erd#zoomOut">-
           </button>
         </div>
-        <!-- Empty state message -->
-        <div class="absolute inset-0 flex items-center justify-center pointer-events-none" data-erd-target="emptyState">
-          <div class="text-center">
-            <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
-              <i data-lucide="file-text" class="h-12 w-12"></i>
-            </div>
-            <h3 class="text-sm font-medium text-gray-900 mb-2">No schema detected</h3>
-            <p class="text-sm text-gray-500">Paste your Rails schema.rb content in the left panel to generate the ERD</p>
+        <!-- Empty state moved below -->
+      </div>
+      <!-- Empty state message (anchored to right pane) -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-40" data-erd-target="emptyState">
+        <div class="text-center">
+          <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
+            <i data-lucide="file-text" class="h-12 w-12"></i>
           </div>
+          <h3 class="text-sm font-medium text-gray-900 mb-2">No schema detected</h3>
+          <p class="text-sm text-gray-500">Paste your Rails schema.rb content in the left panel to generate the ERD</p>
         </div>
       </div>
     </div>
