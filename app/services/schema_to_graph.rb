@@ -14,10 +14,16 @@ class SchemaToGraph
       # Fallback to eval-based shim if simple parser misses features
       evaluate_schema!
     end
-    nodes = @tables.map { |name, t| { id: name, fields: t[:columns].map { |c| [c[:name], c[:type]] } } }
+    # Filter out infrastructure tables we don't want to render
+    nodes = @tables
+      .reject { |name, _| excluded_table?(name) }
+      .map { |name, t| { id: name, fields: t[:columns].map { |c| [c[:name], c[:type]] } } }
 
-    # Convert FK to 1:* (from = many, to = one)
-    links = @fks.map { |fk| { from: fk[:from], to: fk[:to], fromCard: "many", toCard: "1" } }.uniq
+    # Convert FK to 1:* (from = many, to = one) and drop any link that touches excluded tables
+    links = @fks
+      .reject { |fk| excluded_table?(fk[:from]) || excluded_table?(fk[:to]) }
+      .map { |fk| { from: fk[:from], to: fk[:to], fromCard: "many", toCard: "1" } }
+      .uniq
 
     # Compute a deterministic server-side layout so the client doesn't have to
     layout_nodes!(nodes, links)
@@ -26,6 +32,14 @@ class SchemaToGraph
   end
 
   private
+
+  # Returns true when a table should be hidden from the ERD
+  def excluded_table?(table_name)
+    return false if table_name.nil?
+    # Explicit Active Storage tables, plus a conservative prefix check for future tables
+    return true if table_name.start_with?("active_storage_")
+    false
+  end
 
   def evaluate_schema!
     require "active_support/core_ext/string/inflections"
