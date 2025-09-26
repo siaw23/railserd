@@ -692,6 +692,88 @@ export default class extends Controller {
 
 
     updateLinks()
+
+    // --- Highlight connected subgraph on click -------------------------------------------
+    const adjacency = new Map()
+    tables.forEach((t) => adjacency.set(t.id, new Set()))
+    rels.forEach((r) => {
+      if (!adjacency.has(r.from)) adjacency.set(r.from, new Set())
+      if (!adjacency.has(r.to)) adjacency.set(r.to, new Set())
+      adjacency.get(r.from).add(r.to)
+      adjacency.get(r.to).add(r.from)
+    })
+
+    const reachableFrom = (startId) => {
+      const visited = new Set([startId])
+      const q = [startId]
+      while (q.length) {
+        const id = q.shift()
+        const neigh = adjacency.get(id) || new Set()
+        neigh.forEach((n) => {
+          if (!visited.has(n)) { visited.add(n); q.push(n) }
+        })
+      }
+      return visited
+    }
+
+    const applyHighlight = (startId) => {
+      if (!startId) {
+        gTable.classed("dimmed", false)
+        linkObjs.forEach((L) => {
+          L.p.classed("dimmed", false)
+          L.sLab.classed("dimmed", false)
+          L.eLab.classed("dimmed", false)
+        })
+        return
+      }
+      const keep = reachableFrom(startId)
+      gTable.classed("dimmed", (d) => !keep.has(d.id))
+      linkObjs.forEach((L) => {
+        const onPath = keep.has(L.from) && keep.has(L.to)
+        L.p.classed("dimmed", !onPath)
+        L.sLab.classed("dimmed", !onPath)
+        L.eLab.classed("dimmed", !onPath)
+      })
+    }
+
+    this._highlightId = null
+    const CLICK_EPS = 5
+    this._pendingTap = null
+    gTable
+      .on("pointerdown.highlight", (event, d) => {
+        if (event.button !== 0) return
+        // record down position; do NOT preventDefault so d3.drag can work
+        this._pendingTap = { x: event.clientX, y: event.clientY, id: d.id, moved: false }
+      })
+      .on("pointermove.highlight", (event) => {
+        if (!this._pendingTap) return
+        const dx = event.clientX - this._pendingTap.x
+        const dy = event.clientY - this._pendingTap.y
+        if (Math.hypot(dx, dy) > CLICK_EPS) this._pendingTap.moved = true
+      })
+      .on("pointerup.highlight", (event) => {
+        if (!this._pendingTap) return
+        const wasDrag = this._pendingTap.moved
+        const id = this._pendingTap.id
+        this._pendingTap = null
+        if (wasDrag) return // treat as drag, not click
+        // single click/tap highlight toggle
+        if (this._highlightId === id) {
+          this._highlightId = null
+          applyHighlight(null)
+        } else {
+          this._highlightId = id
+          applyHighlight(id)
+        }
+      })
+      .on("pointercancel.highlight", () => { this._pendingTap = null })
+
+    d3.select(this.svgTarget).on("click.highlightReset", (event) => {
+      if (event.target.tagName && event.target.tagName.toLowerCase() === "svg") {
+        this._highlightId = null
+        applyHighlight(null)
+      }
+    })
   }
 }
 
