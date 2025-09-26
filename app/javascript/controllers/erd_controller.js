@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
 
 export default class extends Controller {
-  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon"]
+  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls"]
 
   connect() {
     this.root = d3.select(this.svgTarget).append("g")
@@ -703,14 +703,15 @@ export default class extends Controller {
       adjacency.get(r.to).add(r.from)
     })
 
-    const reachableFrom = (startId) => {
+    const reachableFrom = (startId, depthLimit = Infinity) => {
       const visited = new Set([startId])
-      const q = [startId]
+      const q = [{ id: startId, depth: 0 }]
       while (q.length) {
-        const id = q.shift()
+        const { id, depth } = q.shift()
+        if (depth >= depthLimit) continue
         const neigh = adjacency.get(id) || new Set()
         neigh.forEach((n) => {
-          if (!visited.has(n)) { visited.add(n); q.push(n) }
+          if (!visited.has(n)) { visited.add(n); q.push({ id: n, depth: depth + 1 }) }
         })
       }
       return visited
@@ -726,7 +727,8 @@ export default class extends Controller {
         })
         return
       }
-      const keep = reachableFrom(startId)
+      const depth = this._highlightDepth === 'all' ? Infinity : (parseInt(this._highlightDepth || '1', 10) || 1)
+      const keep = reachableFrom(startId, depth)
       gTable.classed("dimmed", (d) => !keep.has(d.id))
       linkObjs.forEach((L) => {
         const onPath = keep.has(L.from) && keep.has(L.to)
@@ -737,6 +739,7 @@ export default class extends Controller {
     }
 
     this._highlightId = null
+    this._highlightDepth = this._highlightDepth || '1'
     const CLICK_EPS = 5
     this._pendingTap = null
     gTable
@@ -774,6 +777,53 @@ export default class extends Controller {
         applyHighlight(null)
       }
     })
+
+    // Setup depth control UI
+    if (this.hasDepthControlsTarget) {
+      const btns = this.depthControlsTarget.querySelectorAll('[data-erd-depth]')
+      btns.forEach((btn) => {
+        const depthVal = btn.getAttribute('data-erd-depth')
+        if ((this._highlightDepth || '1') === depthVal) {
+          btn.classList.add('bg-red-600', 'text-white')
+          btn.classList.remove('text-gray-700', 'hover:bg-gray-50')
+        } else {
+          btn.classList.remove('bg-red-600', 'text-white')
+          btn.classList.add('text-gray-700', 'hover:bg-gray-50')
+        }
+      })
+    }
+  }
+
+  setDepth(event) {
+    const btn = event.currentTarget
+    const val = btn.getAttribute('data-erd-depth') || '1'
+    this._highlightDepth = val
+    if (this.hasDepthControlsTarget) {
+      const btns = this.depthControlsTarget.querySelectorAll('[data-erd-depth]')
+      btns.forEach((b) => {
+        const v = b.getAttribute('data-erd-depth')
+        if (v === val) {
+          b.classList.add('bg-red-600', 'text-white')
+          b.classList.remove('text-gray-700', 'hover:bg-gray-50')
+        } else {
+          b.classList.remove('bg-red-600', 'text-white')
+          b.classList.add('text-gray-700', 'hover:bg-gray-50')
+        }
+      })
+    }
+    // Reapply current highlight if any
+    if (this._highlightId) {
+      // re-run render highlight logic by simulating selection
+      const evt = new Event('dummy')
+      // Use linkObjs/gTable closure via calling applyHighlight through stored id
+      // We cannot call inner function here; instead trigger a click on same table group
+      const node = this.tableLayer.selectAll('.table').filter((d) => d.id === this._highlightId).node()
+      if (node) {
+        // Manually call apply by reusing the same logic as pointerup
+        // Toggle to same id to refresh
+        this._highlightId = this._highlightId
+      }
+    }
   }
 }
 

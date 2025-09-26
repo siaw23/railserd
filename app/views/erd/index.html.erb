@@ -103,6 +103,25 @@ end
                   data-action="click->erd#zoomOut">-
           </button>
         </div>
+        <!-- Highlight depth selector -->
+        <div class="fixed bottom-4 right-32 flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50" data-erd-target="depthControls">
+          <button type="button"
+                  class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                  data-erd-depth="1"
+                  data-action="click->erd#setDepth">1</button>
+          <button type="button"
+                  class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                  data-erd-depth="2"
+                  data-action="click->erd#setDepth">2</button>
+          <button type="button"
+                  class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                  data-erd-depth="3"
+                  data-action="click->erd#setDepth">3</button>
+          <button type="button"
+                  class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                  data-erd-depth="all"
+                  data-action="click->erd#setDepth">All</button>
+        </div>
         <!-- Empty state moved below -->
       </div>
       <!-- Empty state message (anchored to right pane) -->
