@@ -720,6 +720,7 @@ export default class extends Controller {
     const applyHighlight = (startId) => {
       if (!startId) {
         gTable.classed("dimmed", false)
+        gTable.classed("selected", false)
         linkObjs.forEach((L) => {
           L.p.classed("dimmed", false)
           L.sLab.classed("dimmed", false)
@@ -730,6 +731,7 @@ export default class extends Controller {
       const depth = this._highlightDepth === 'all' ? Infinity : (parseInt(this._highlightDepth || '1', 10) || 1)
       const keep = reachableFrom(startId, depth)
       gTable.classed("dimmed", (d) => !keep.has(d.id))
+      gTable.classed("selected", (d) => d.id === startId)
       linkObjs.forEach((L) => {
         const onPath = keep.has(L.from) && keep.has(L.to)
         L.p.classed("dimmed", !onPath)
