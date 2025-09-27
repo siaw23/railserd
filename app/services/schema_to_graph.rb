@@ -85,9 +85,12 @@ class SchemaToGraph
           next
         end
 
-        if (m = line.match(/^t\.(\w+)\s+\"([^\"]+)\"/))
+        # Support both symbol and string column names, e.g.:
+        # t.references :user, foreign_key: true
+        # t.references "user", foreign_key: true
+        if (m = line.match(/^t\.(\w+)\s+(?::([a-zA-Z_]\w*)|\"([^\"]+)\")/))
           meth = m[1]
-          col  = m[2]
+          col  = m[2] || m[3]
           case meth
           when 'references', 'belongs_to'
             @tables[current_table][:columns] << { name: "#{col}_id", type: 'int' }

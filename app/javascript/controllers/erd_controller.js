@@ -665,7 +665,7 @@ export default class extends Controller {
         const eText = L.toCard === "1" ? "1" : "*"
 
         if (sHoriz) {
-          updates.push(() => L.sLab.text(sText).attr("x", sMid.x).attr("y", sMid.y - off)
+          updates.push(() => L.sLab.text(sText).attr("x", sMid.x).attr("y", sMid.y - off - 2)
             .attr("text-anchor", "middle").attr("dominant-baseline", "central"))
         } else {
           const right = s1.x > s0.x
@@ -675,7 +675,7 @@ export default class extends Controller {
         }
 
         if (eHoriz) {
-          updates.push(() => L.eLab.text(eText).attr("x", eMid.x).attr("y", eMid.y - off)
+          updates.push(() => L.eLab.text(eText).attr("x", eMid.x).attr("y", eMid.y - off - 2)
             .attr("text-anchor", "middle").attr("dominant-baseline", "central"))
         } else {
           const right = e1.x > e0.x

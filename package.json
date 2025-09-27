@@ -2,9 +2,9 @@
   "name": "railserd",
   "private": true,
   "scripts": {
-    "build": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --define:process.env.NODE_ENV=\"production\" --minify --legal-comments=none",
-    "build:dev": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap",
-    "build:watch": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap --watch"
+    "build": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --define:process.env.NODE_ENV=\"production\" --minify --legal-comments=none --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
+    "build:dev": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
+    "build:watch": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap --watch --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]"
   },
   "devDependencies": {
     "esbuild": "^0.21.0"
@@ -13,7 +13,9 @@
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.4",
     "d3": "^7.9.0",
-    "lucide": "^0.468.0"
+    "lucide": "^0.468.0",
+    "highlight.js": "^11.9.0",
+    "monaco-editor": "^0.53.0"
   }
 }
 
