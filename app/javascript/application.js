@@ -69,6 +69,12 @@ ActiveRecord::Schema.define(version: ${version}) do
     t.references "user", foreign_key: true
     t.timestamps
   end
+
+  create_table "comments", force: :cascade do |t|
+    t.references "post", null: false, foreign_key: true
+    t.text "body", null: false
+    t.timestamps
+  end
 end`
 
   const initialValue = (textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample
@@ -86,14 +92,16 @@ end`
     tabSize: 2
   })
 
-  // Place cursor at the end and focus editor
+  // Place cursor at the end but keep scroll at the top on load
   const model = editor.getModel()
   if (model) {
     const lineNumber = model.getLineCount()
     const column = model.getLineMaxColumn(lineNumber)
     editor.setPosition({ lineNumber, column })
-    editor.revealPositionInCenter({ lineNumber, column })
-    editor.focus()
+    // Keep initial scroll at the very top to show content from the beginning
+    requestAnimationFrame(() => {
+      try { editor.setScrollTop(0) } catch {}
+    })
   }
 
   const syncToTextarea = () => {
