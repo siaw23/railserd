@@ -39,7 +39,7 @@ document.addEventListener("turbo:load", () => {
   const defaultSample = `# +----------------------------------------------+
 # | Senior Ruby on Rails Consultant.             |
 # | 11 years of experience.                      |
-# | Open to freelance engagements.               |
+# | Open to freelance & contract engagements.    |
 # | Let's talk: mensah.consultancy@gmail.com     |
 # | X | LinkedIn | Github | YouTube: siaw23      |
 # +----------------------------------------------+
