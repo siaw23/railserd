@@ -1,3 +1,5 @@
+require "set"
+
 class SchemaToGraph
   def self.call(schema_rb) = new(schema_rb).call
 
@@ -5,6 +7,7 @@ class SchemaToGraph
     @schema_rb = schema_rb
     @tables = {} # { "users" => { columns:[{name:,type:}], x:,y: } }
     @fks    = [] # [{ from:"products", to:"merchants", column:"merchant_id" }]
+    @unique_fk_cols = Set.new # Set of [table, column] that are uniquely indexed
   end
 
   def call
@@ -19,10 +22,16 @@ class SchemaToGraph
       .reject { |name, _| excluded_table?(name) }
       .map { |name, t| { id: name, fields: t[:columns].map { |c| [c[:name], c[:type]] } } }
 
-    # Convert FK to 1:* (from = many, to = one) and drop any link that touches excluded tables
+    # Convert FK to 1:* by default (from = many, to = one). If the foreign key column
+    # on the referencing table has a UNIQUE index, treat it as 1:1.
+    # Also drop any link that touches excluded tables
     links = @fks
       .reject { |fk| excluded_table?(fk[:from]) || excluded_table?(fk[:to]) }
-      .map { |fk| { from: fk[:from], to: fk[:to], fromCard: "many", toCard: "1" } }
+      .map { |fk|
+        inferred_col = fk[:column] || "#{fk[:to].to_s.singularize}_id"
+        one_to_one = @unique_fk_cols.include?([fk[:from], inferred_col])
+        { from: fk[:from], to: fk[:to], fromCard: (one_to_one ? "1" : "many"), toCard: "1" }
+      }
       .uniq
 
     # Compute a deterministic server-side layout so the client doesn't have to
@@ -91,10 +100,48 @@ class SchemaToGraph
           end
           next
         end
+
+        # Capture unique indexes on single columns (t.index ... unique: true)
+        # Only treat as single-column unique index (ignore composite indexes like ["a", "b"])
+        if line.match(/^t\.index\s+/) && line.include?("unique: true")
+          # Try to extract bracket list first
+          if (mb = line.match(/\[(.*?)\]/))
+            cols = mb[1].scan(/\"([^\"]+)\"/).flatten
+            if cols.length == 1
+              @unique_fk_cols << [current_table, cols.first]
+              next
+            end
+          end
+          # Fallback to single string argument form
+          if (m1 = line.match(/^t\.index\s+\"([^\"]+)\"/))
+            @unique_fk_cols << [current_table, m1[1]]
+            next
+          end
+          next
+        end
       end
 
       if m = line.match(/^add_foreign_key\s+\"([^\"]+)\",\s*\"([^\"]+)\"/)
         @fks << { from: m[1], to: m[2], column: nil }
+        next
+      end
+
+      # Capture add_index ... unique: true outside table blocks
+      # add_index table, ..., unique: true (ignore composite arrays unless single col)
+      if line.match(/^add_index\s+/) && line.include?("unique: true")
+        if (mb = line.match(/^add_index\s+\"([^\"]+)\",\s*\[(.*?)\]/))
+          tbl = mb[1]
+          cols = mb[2].scan(/\"([^\"]+)\"/).flatten
+          if cols.length == 1
+            @unique_fk_cols << [tbl, cols.first]
+          end
+          next
+        elsif (m = line.match(/^add_index\s+\"([^\"]+)\",\s*\"([^\"]+)\"/))
+          tbl = m[1]
+          col = m[2]
+          @unique_fk_cols << [tbl, col]
+          next
+        end
         next
       end
     end
