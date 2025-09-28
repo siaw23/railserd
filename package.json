@@ -2,9 +2,9 @@
   "name": "railserd",
   "private": true,
   "scripts": {
-    "build": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --define:process.env.NODE_ENV=\"production\" --minify --legal-comments=none --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
-    "build:dev": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
-    "build:watch": "esbuild app/javascript/application.js --bundle --outdir=app/assets/builds --public-path=/assets --sourcemap --watch --loader:.ttf=file --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]"
+    "build": "esbuild app/javascript/application.js --bundle --format=esm --outdir=app/assets/builds --public-path=/assets --define:process.env.NODE_ENV=\"production\" --minify --legal-comments=none --loader:.ttf=dataurl --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
+    "build:dev": "esbuild app/javascript/application.js --bundle --format=esm --outdir=app/assets/builds --public-path=/assets --sourcemap --loader:.ttf=dataurl --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]",
+    "build:watch": "esbuild app/javascript/application.js --bundle --format=esm --outdir=app/assets/builds --public-path=/assets --sourcemap --watch --loader:.ttf=dataurl --loader:.woff=file --loader:.woff2=file --asset-names=[name]-[hash]"
   },
   "devDependencies": {
     "esbuild": "^0.21.0"
