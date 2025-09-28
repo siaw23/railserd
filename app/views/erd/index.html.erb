@@ -109,8 +109,8 @@ end
                   data-action="click->erd#zoomOut">-
           </button>
         </div>
-        <!-- Highlight depth selector -->
-        <div class="fixed bottom-4 right-32 flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50" data-erd-target="depthControls">
+        <!-- Highlight depth selector + Search -->
+        <div class="fixed bottom-4 right-32 flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50 items-stretch" data-erd-target="depthControls">
           <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
             Highlight Depth
           </div>
@@ -130,6 +130,11 @@ end
                   class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
                   data-erd-depth="all"
                   data-action="click->erd#setDepth">All</button>
+          <div class="hidden md:flex items-center border-l border-gray-200">
+            <label for="erd-search" class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border-r border-gray-200 h-full flex items-center">Search model</label>
+            <input id="erd-search" type="text" placeholder="users, posts, ..." data-action="input->erd#onSearchInput" data-erd-target="searchInput"
+                   class="px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500" style="min-width: 200px;" />
+          </div>
         </div>
         <!-- Empty state moved below -->
       </div>

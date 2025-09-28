@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
 
 export default class extends Controller {
-  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls"]
+  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput"]
 
   connect() {
     this.root = d3.select(this.svgTarget).append("g")
@@ -286,6 +286,9 @@ export default class extends Controller {
     measureLayer.remove()
     const byId = Object.fromEntries(tables.map((t) => [t.id, t]))
 
+    // Build quick lookup for search by lowercase id
+    this._tableByLowerId = Object.fromEntries(tables.map((t) => [String(t.id).toLowerCase(), t]))
+
 
     const autoLayout = (nodes, links) => {
 
@@ -405,13 +408,14 @@ export default class extends Controller {
       const contentW = Math.max(1, bounds.maxX - bounds.minX)
       const contentH = Math.max(1, bounds.maxY - bounds.minY)
       const pad = 40
+      const reservedBottom = this.hasDepthControlsTarget ? (this.depthControlsTarget.offsetHeight + 24) : 0
       const viewW = Math.max(1, container.clientWidth - pad * 2)
-      const viewH = Math.max(1, container.clientHeight - pad * 2)
+      const viewH = Math.max(1, container.clientHeight - pad * 2 - reservedBottom)
       const rawScale = Math.min(viewW / contentW, viewH / contentH)
       const [minScale, maxScale] = this.zoom.scaleExtent()
       const scale = Math.max(minScale, Math.min(maxScale, rawScale))
       const tx = (container.clientWidth - contentW * scale) / 2 - bounds.minX * scale
-      const ty = (container.clientHeight - contentH * scale) / 2 - bounds.minY * scale
+      const ty = ((container.clientHeight - reservedBottom) - contentH * scale) / 2 - bounds.minY * scale
       const svgSel = d3.select(this.svgTarget)
       svgSel.call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
     }
@@ -794,6 +798,17 @@ export default class extends Controller {
         }
       })
     }
+
+    // Hook up search box if present
+    if (this.hasSearchInputTarget) {
+      this.searchInputTarget.addEventListener('input', (e) => {
+        const q = (e.target.value || '').trim().toLowerCase()
+        clearTimeout(this._searchTimer)
+        this._searchTimer = setTimeout(() => {
+          this.applySearchQuery(q, tables, linkObjs)
+        }, 220)
+      })
+    }
   }
 
   setDepth(event) {
@@ -826,6 +841,39 @@ export default class extends Controller {
         this._highlightId = this._highlightId
       }
     }
+  }
+
+  applySearchQuery(q, tables, linkObjs) {
+    const gTable = this.tableLayer.selectAll('.table')
+    if (!q) {
+      gTable.classed('dimmed', false)
+      linkObjs.forEach((L) => { L.p.classed('dimmed', false); L.sLab.classed('dimmed', false); L.eLab.classed('dimmed', false) })
+      return
+    }
+    const match = (this._tableByLowerId || {})[q]
+    if (!match) {
+      gTable.classed('dimmed', true)
+      linkObjs.forEach((L) => { L.p.classed('dimmed', true); L.sLab.classed('dimmed', true); L.eLab.classed('dimmed', true) })
+      return
+    }
+    gTable.classed('dimmed', (d) => d.id !== match.id)
+    linkObjs.forEach((L) => {
+      const onPath = (L.from === match.id || L.to === match.id)
+      L.p.classed('dimmed', !onPath)
+      L.sLab.classed('dimmed', !onPath)
+      L.eLab.classed('dimmed', !onPath)
+    })
+
+    const container = this.svgTarget.parentElement
+    if (!container) return
+    const svgSel = d3.select(this.svgTarget)
+    const t = d3.zoomTransform(this.svgTarget)
+    const targetCx = match.x + match.w / 2
+    const targetCy = match.y + match.h / 2
+    const scale = t.k
+    const tx = container.clientWidth / 2 - targetCx * scale
+    const ty = container.clientHeight / 2 - targetCy * scale
+    svgSel.transition().duration(450).call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
   }
 }
 
