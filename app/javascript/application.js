@@ -48,13 +48,12 @@ document.addEventListener("turbo:load", () => {
 # No sessions, no persistence.
 # Your schema.rb remains private.
 #
-# Paste your schema.rb content in this pane.
-#
 # Tips:
 # – Zoom, pan and drag tables to arrange your diagram.
 # – Click a table to highlight its connected tables.
-# – Use the “Highlight Depth” control to show 1, 2, 3, or all
-#   hops.
+# – Use the “Highlight Depth” control to show 1, 2, 3, or all hops.
+#
+# Paste your schema.rb content in this pane.
 
 ActiveRecord::Schema.define(version: ${version}) do
 
