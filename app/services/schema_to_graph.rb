@@ -17,6 +17,12 @@ class SchemaToGraph
       # Fallback to eval-based shim if simple parser misses features
       evaluate_schema!
     end
+
+    # Heuristic FK inference: if a table contains a column named *_id and a
+    # table with that pluralized name exists, assume an association unless a
+    # concrete foreign key was already captured. This makes plain schemas work
+    # even without explicit `foreign_key: true` or add_foreign_key statements.
+    infer_foreign_keys_from_columns!
     # Filter out infrastructure tables we don't want to render
     nodes = @tables
       .reject { |name, _| excluded_table?(name) }
@@ -146,6 +152,27 @@ class SchemaToGraph
           next
         end
         next
+      end
+    end
+  end
+
+  # Infer missing foreign keys from *_id columns
+  def infer_foreign_keys_from_columns!
+    require "active_support/core_ext/string/inflections"
+    existing = Set.new(@fks.map { |fk| [fk[:from], fk[:to]] })
+    table_names = @tables.keys.to_set
+    @tables.each do |from_tbl, t|
+      next unless t && t[:columns]
+      t[:columns].each do |col|
+        name = col[:name].to_s
+        next unless name.end_with?("_id") && name.size > 3
+        base = name.sub(/_id\z/, "")
+        to_tbl = base.pluralize
+        next unless table_names.include?(to_tbl)
+        pair = [from_tbl, to_tbl]
+        next if existing.include?(pair)
+        @fks << { from: from_tbl, to: to_tbl, column: name }
+        existing << pair
       end
     end
   end
