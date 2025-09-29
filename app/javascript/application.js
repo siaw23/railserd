@@ -57,24 +57,66 @@ document.addEventListener("turbo:load", () => {
 #   hops.
 
 ActiveRecord::Schema.define(version: ${version}) do
+
   create_table "users", force: :cascade do |t|
-    t.string "email", null: false
-    t.string "name"
+    t.string   "email",             null: false
+    t.string   "username",          null: false
+    t.string   "name"
+    t.string   "password_digest"
+    t.integer  "role",              null: false, default: 0
+    t.datetime "confirmed_at"
+    t.datetime "last_seen_at"
+    t.string   "locale",            default: "en"
+    t.string   "time_zone",         default: "UTC"
+    t.jsonb    "settings",          null: false, default: {}
+    t.datetime "deleted_at"
     t.timestamps
   end
 
   create_table "posts", force: :cascade do |t|
-    t.string "title"
-    t.text "content"
-    t.references "user", foreign_key: true
+    t.string   "title",                          null: false
+    t.text     "content"
+    t.references "user", null: false, foreign_key: true
+    t.string   "slug",                           null: false
+    t.integer  "status",     null: false, default: 0
+    t.integer  "visibility", null: false, default: 0
+    t.datetime "published_at"
+    t.boolean  "pinned",     null: false, default: false
+    t.integer  "comments_count",  null: false, default: 0
+    t.integer  "reactions_count", null: false, default: 0
+    t.datetime "deleted_at"
     t.timestamps
   end
 
   create_table "comments", force: :cascade do |t|
     t.references "post", null: false, foreign_key: true
-    t.text "body", null: false
+    t.references "user", null: false, foreign_key: true
+    t.text     "body",   null: false
+    t.bigint   "parent_id"
+    t.integer  "depth",  null: false, default: 0
+    t.integer  "reactions_count", null: false, default: 0
+    t.datetime "edited_at"
+    t.datetime "deleted_at"
     t.timestamps
   end
+
+  create_table "reactions", force: :cascade do |t|
+    t.references "user", null: false, foreign_key: true
+    t.string     "reactable_type", null: false
+    t.bigint     "reactable_id",   null: false
+    t.integer    "kind",           null: false, default: 0
+    t.timestamps
+  end
+
+  create_table "follows", force: :cascade do |t|
+    t.bigint    "follower_id", null: false
+    t.bigint    "followed_id", null: false
+    t.datetime  "created_at",  null: false
+  end
+
+  add_foreign_key "follows", "users", column: "follower_id", on_delete: :cascade
+  add_foreign_key "follows", "users", column: "followed_id", on_delete: :cascade
+
 end`
 
   const initialValue = (textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample
