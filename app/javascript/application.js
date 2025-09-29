@@ -99,6 +99,11 @@ ActiveRecord::Schema.define(version: ${version}) do
     t.timestamps
   end
 
+  add_index "comments", ["post_id"], name: "index_comments_on_post_id"
+  add_index "comments", ["user_id"], name: "index_comments_on_user_id"
+  add_index "comments", ["parent_id"], name: "index_comments_on_parent_id"
+  add_foreign_key "comments", "comments", column: "parent_id", on_delete: :cascade
+
   create_table "reactions", force: :cascade do |t|
     t.references "user", null: false, foreign_key: true
     t.string     "reactable_type", null: false
