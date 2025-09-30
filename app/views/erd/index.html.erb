@@ -23,44 +23,7 @@
         <textarea
           data-erd-target="input"
           data-action="input->erd#debouncedParse paste->erd#debouncedParse"
-          placeholder="# +---------------------------------------------+
-# |  Senior Ruby on Rails Consultant.           |
-# |  11 years of experience.                    |
-# |  Open to freelance & contract engagements.  |
-# |  Let's talk: mensah.consultancy@gmail.com   |
-# |  X | LinkedIn | Github | YouTube: siaw23    |
-# +---------------------------------------------+
-#
-# This app uses no database and does not store your schema.
-# No sessions, no persistence.
-# Your schema.rb remains private.
-#
-# Paste your schema.rb content in this pane.
-#
-# Tips:
-# - Zoom, pan and drag tables to arrange your diagram.
-# - Click a table to highlight its connected tables.
-# - Use the “Highlight Depth” control to show 1, 2, 3, or all hops.
-
-ActiveRecord::Schema.define(version: 2024_01_01_000000) do
-  create_table &quot;users&quot;, force: :cascade do |t|
-    t.string &quot;email&quot;, null: false
-    t.string &quot;name&quot;
-    t.timestamps
-  end
-
-  create_table &quot;posts&quot;, force: :cascade do |t|
-    t.string &quot;title&quot;
-    t.text &quot;content&quot;
-    t.references :user, foreign_key: true
-    t.timestamps
-  end
-end
-
-
-
-
-"
+          placeholder=""
           class="w-full h-full bg-transparent text-gray-100 placeholder-gray-500 font-mono text-sm leading-relaxed p-4 border-0 outline-none resize-none focus:ring-0"
           spellcheck="false"
         ></textarea>

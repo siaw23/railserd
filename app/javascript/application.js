@@ -49,9 +49,10 @@ document.addEventListener("turbo:load", () => {
 # Your schema.rb remains private.
 #
 # Tips:
-# – Zoom, pan and drag tables to arrange your diagram.
-# – Click a table to highlight its connected tables.
-# – Use the “Highlight Depth” control to show 1, 2, 3, or all hops.
+# • Zoom, pan and drag tables to arrange your diagram.
+# • Click a table to highlight its connected tables.
+# • Use the “Highlight Depth” control to show hops.
+# • Search to bring a model into focus.
 #
 # Paste your schema.rb content in this pane.
 
@@ -73,53 +74,53 @@ ActiveRecord::Schema.define(version: ${version}) do
   end
 
   create_table "posts", force: :cascade do |t|
-    t.string   "title",                          null: false
+    t.string   "title",             null: false
     t.text     "content"
-    t.references "user", null: false, foreign_key: true
-    t.string   "slug",                           null: false
-    t.integer  "status",     null: false, default: 0
-    t.integer  "visibility", null: false, default: 0
+    t.references "user",            null: false, foreign_key: true
+    t.string   "slug",              null: false
+    t.integer  "status",            null: false, default: 0
+    t.integer  "visibility",        null: false, default: 0
     t.datetime "published_at"
-    t.boolean  "pinned",     null: false, default: false
-    t.integer  "comments_count",  null: false, default: 0
-    t.integer  "reactions_count", null: false, default: 0
+    t.boolean  "pinned",            null: false, default: false
+    t.integer  "comments_count",    null: false, default: 0
+    t.integer  "reactions_count",   null: false, default: 0
     t.datetime "deleted_at"
     t.timestamps
   end
 
   create_table "comments", force: :cascade do |t|
-    t.references "post", null: false, foreign_key: true
-    t.references "user", null: false, foreign_key: true
-    t.text     "body",   null: false
+    t.references "post",            null: false, foreign_key: true
+    t.references "user",            null: false, foreign_key: true
+    t.text     "body",              null: false
     t.bigint   "parent_id"
-    t.integer  "depth",  null: false, default: 0
-    t.integer  "reactions_count", null: false, default: 0
+    t.integer  "depth",             null: false, default: 0
+    t.integer  "reactions_count",   null: false, default: 0
     t.datetime "edited_at"
     t.datetime "deleted_at"
     t.timestamps
   end
 
-  add_index "comments", ["post_id"], name: "index_comments_on_post_id"
-  add_index "comments", ["user_id"], name: "index_comments_on_user_id"
-  add_index "comments", ["parent_id"], name: "index_comments_on_parent_id"
-  add_foreign_key "comments", "comments", column: "parent_id", on_delete: :cascade
+  add_index "comments", ["post_id"],    name: "index_comments_on_post_id"
+  add_index "comments", ["user_id"],    name: "index_comments_on_user_id"
+  add_index "comments", ["parent_id"],  name: "index_comments_on_parent_id"
+  add_foreign_key "comments", "comments", column: "parent_id"
 
   create_table "reactions", force: :cascade do |t|
     t.references "user", null: false, foreign_key: true
-    t.string     "reactable_type", null: false
-    t.bigint     "reactable_id",   null: false
-    t.integer    "kind",           null: false, default: 0
+    t.string     "reactable_type",  null: false
+    t.bigint     "reactable_id",    null: false
+    t.integer    "kind",            null: false, default: 0
     t.timestamps
   end
 
   create_table "follows", force: :cascade do |t|
-    t.bigint    "follower_id", null: false
-    t.bigint    "followed_id", null: false
-    t.datetime  "created_at",  null: false
+    t.bigint    "follower_id",      null: false
+    t.bigint    "followed_id",      null: false
+    t.datetime  "created_at",       null: false
   end
 
-  add_foreign_key "follows", "users", column: "follower_id", on_delete: :cascade
-  add_foreign_key "follows", "users", column: "followed_id", on_delete: :cascade
+  add_foreign_key "follows", "users", column: "follower_id"
+  add_foreign_key "follows", "users", column: "followed_id"
 
 end`
 
