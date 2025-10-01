@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
+import { ZoomManager } from "./zoom_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput"]
@@ -10,8 +11,10 @@ export default class extends Controller {
     this.labelLayer = this.root.append("g")
     this.tableLayer = this.root.append("g")
 
-    this.zoom = d3.zoom().scaleExtent([0.2, 3]).on("zoom", (e) => this.root.attr("transform", e.transform))
-    d3.select(this.svgTarget).call(this.zoom).on("dblclick.zoom", null)
+    this.zoomManager = new ZoomManager(this.svgTarget, this.root, {
+      minScale: 0.2,
+      maxScale: 3
+    })
 
     const container = this.svgTarget.parentElement
     if (container) {
@@ -44,12 +47,11 @@ export default class extends Controller {
 
 
   zoomBy(factor) {
-    const svgSel = d3.select(this.svgTarget)
-    svgSel.transition().duration(200).call(this.zoom.scaleBy, factor)
+    this.zoomManager.zoomBy(factor)
   }
 
-  zoomIn() { this.zoomBy(1.2) }
-  zoomOut() { this.zoomBy(1 / 1.2) }
+  zoomIn() { this.zoomManager.zoomIn() }
+  zoomOut() { this.zoomManager.zoomOut() }
 
   debouncedParse() {
     clearTimeout(this._debounceTimer)
@@ -110,8 +112,11 @@ export default class extends Controller {
     this.linkLayer = this.root.append("g")
     this.labelLayer = this.root.append("g")
     this.tableLayer = this.root.append("g")
-    if (this.zoom) {
-      svgSel.call(this.zoom.transform, d3.zoomIdentity)
+    if (this.zoomManager) {
+      this.zoomManager = new ZoomManager(this.svgTarget, this.root, {
+        minScale: 0.2,
+        maxScale: 3
+      })
     }
   }
 
@@ -403,21 +408,12 @@ export default class extends Controller {
     })()
 
     const fitToViewport = () => {
-      const container = this.svgTarget.parentElement
-      if (!container) return
-      const contentW = Math.max(1, bounds.maxX - bounds.minX)
-      const contentH = Math.max(1, bounds.maxY - bounds.minY)
-      const pad = 40
       const reservedBottom = this.hasDepthControlsTarget ? (this.depthControlsTarget.offsetHeight + 24) : 0
-      const viewW = Math.max(1, container.clientWidth - pad * 2)
-      const viewH = Math.max(1, container.clientHeight - pad * 2 - reservedBottom)
-      const rawScale = Math.min(viewW / contentW, viewH / contentH)
-      const [minScale, maxScale] = this.zoom.scaleExtent()
-      const scale = Math.max(minScale, Math.min(maxScale, rawScale))
-      const tx = (container.clientWidth - contentW * scale) / 2 - bounds.minX * scale
-      const ty = ((container.clientHeight - reservedBottom) - contentH * scale) / 2 - bounds.minY * scale
-      const svgSel = d3.select(this.svgTarget)
-      svgSel.call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
+      this.zoomManager.fitToViewport(bounds, {
+        padding: 40,
+        reservedBottom,
+        animate: false
+      })
     }
     requestAnimationFrame(fitToViewport)
 
@@ -864,16 +860,12 @@ export default class extends Controller {
       L.eLab.classed('dimmed', !onPath)
     })
 
-    const container = this.svgTarget.parentElement
-    if (!container) return
-    const svgSel = d3.select(this.svgTarget)
-    const t = d3.zoomTransform(this.svgTarget)
     const targetCx = match.x + match.w / 2
     const targetCy = match.y + match.h / 2
-    const scale = t.k
-    const tx = container.clientWidth / 2 - targetCx * scale
-    const ty = container.clientHeight / 2 - targetCy * scale
-    svgSel.transition().duration(450).call(this.zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale))
+    this.zoomManager.panToPoint(targetCx, targetCy, {
+      animate: true,
+      duration: 450
+    })
   }
 }
 
