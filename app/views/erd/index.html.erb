@@ -1,0 +1,239 @@
+<% content_for :body_class do %>h-screen<% end %>
+<% content_for :main_class do %>h-screen p-0 m-0 max-w-none<% end %>
+<div class="h-full w-full bg-gray-50" data-controller="erd">
+  <div class="flex h-full relative">
+    <div class="flex-none bg-gray-900 border-r border-gray-300 flex flex-col overflow-hidden"
+         data-erd-target="leftPane"
+         style="width: 40%; min-width: 320px; transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1); will-change: transform;">
+      <div class="px-4 py-3 bg-gray-800 border-b border-gray-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-gray-200">Rails ERD Generator</h2>
+            <p class="text-xs text-gray-400 mt-1">Paste your schema.rb content here</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <div class="h-2 w-2 bg-red-400 rounded-full animate-pulse"></div>
+            <span class="text-xs text-gray-400">Live Preview</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex-1 relative">
+        <textarea
+          data-erd-target="input"
+          data-action="input->erd#debouncedParse paste->erd#debouncedParse"
+          placeholder=""
+          class="w-full h-full bg-transparent text-gray-100 placeholder-gray-500 font-mono text-sm leading-relaxed p-4 border-0 outline-none resize-none focus:ring-0"
+          spellcheck="false"
+        ></textarea>
+        <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
+           class="absolute bottom-3 right-3 inline-flex items-center justify-center h-8 w-8 rounded-md bg-gray-800/70 hover:bg-gray-700 text-gray-200 shadow ring-1 ring-black/10">
+          <i data-lucide="github" class="w-4 h-4"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="flex-1 bg-gray-50 flex flex-col relative"
+         data-erd-target="rightPane"
+         style="transition: margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1);">
+      <div class="px-4 py-3 bg-white border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <button type="button"
+                    data-action="click->erd#togglePane"
+                    data-erd-target="toggleButton"
+                    class="inline-flex items-center p-1.5 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 transition-colors duration-150 btn-toggle"
+                    title="Toggle schema panel">
+              <svg data-erd-target="panelLeftIcon" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m15 18-6-6 6-6"/>
+              </svg>
+              <svg data-erd-target="panelRightIcon" class="h-4 w-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
+            <div>
+              <h2 class="text-sm font-semibold text-gray-800">Entity Relationship Diagram</h2>
+              <p class="text-xs text-gray-500 mt-1">Interactive ERD visualization</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="flex-1 relative overflow-auto">
+        <svg data-erd-target="svg" class="block min-w-full min-h-full"></svg>
+        <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
+           class="absolute top-3 left-3 inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200">
+          <i data-lucide="github" class="w-4 h-4"></i>
+        </a>
+        <div class="fixed bottom-4 right-4 flex flex-row gap-2 z-50">
+          <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  data-action="click->erd#zoomIn" title="Zoom in">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </button>
+          <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  data-action="click->erd#zoomOut" title="Zoom out">
+            <i data-lucide="minus" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="fixed bottom-4 right-32 flex flex-row gap-4 z-50 items-end">
+          <div class="flex bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+            <button type="button"
+                    class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-0"
+                    data-action="click->erd#toggleCompactTables"
+                    data-erd-target="compactButton"
+                    title="Toggle compact view for tables with more than 3 columns">
+              Compact 3+
+            </button>
+          </div>
+
+          <div class="flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden items-stretch" data-erd-target="depthControls">
+            <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
+              Highlight Depth
+            </div>
+            <button type="button"
+                    class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                    data-erd-depth="1"
+                    data-action="click->erd#setDepth">1</button>
+            <button type="button"
+                    class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                    data-erd-depth="2"
+                    data-action="click->erd#setDepth">2</button>
+            <button type="button"
+                    class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                    data-erd-depth="3"
+                    data-action="click->erd#setDepth">3</button>
+            <button type="button"
+                    class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
+                    data-erd-depth="all"
+                    data-action="click->erd#setDepth">All</button>
+          </div>
+
+          <div class="hidden md:flex bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden items-stretch">
+            <label for="erd-search" class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border-r border-gray-200 h-full flex items-center">Search model</label>
+            <input id="erd-search" type="text" placeholder="users, posts, ..." data-action="input->erd#onSearchInput" data-erd-target="searchInput"
+                   class="px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-red-500" style="min-width: 200px;" />
+          </div>
+        </div>
+      </div>
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-40" data-erd-target="emptyState">
+        <div class="text-center">
+          <div class="mx-auto h-12 w-12 text-gray-400 mb-4">
+            <i data-lucide="file-text" class="h-12 w-12"></i>
+          </div>
+          <h3 class="text-sm font-medium text-gray-900 mb-2">No schema detected</h3>
+          <p class="text-sm text-gray-500">Paste your Rails schema.rb content in the left panel to generate the ERD</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .table {
+    cursor: move;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    transition: filter 0.2s ease;
+  }
+  .table:hover {
+    filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.15));
+  }
+  .table-outline {
+    fill: white;
+    stroke: #e5e7eb;
+    stroke-width: 1;
+    rx: 8;
+    ry: 8;
+  }
+  .header {
+    fill: #dc2626;
+  }
+  .table.selected .header {
+    fill: #111827;
+  }
+  .title {
+    fill: white;
+    font-weight: 700;
+    font-size: 14px;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  .row {
+    fill: white;
+  }
+  .row.alt {
+    fill: #fef2f2;
+  }
+  .cell-name {
+    fill: #1f2937;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, "Menlo", "Monaco", "Cascadia Code", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Code", "Droid Sans Mono", "Courier New", monospace;
+    font-weight: 500;
+  }
+  .cell-type {
+    fill: #6b7280;
+    font-size: 12px;
+    text-anchor: end;
+    font-family: ui-monospace, SFMono-Regular, "Menlo", "Monaco", "Cascadia Code", "Segoe UI Mono", "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro", "Fira Code", "Droid Sans Mono", "Courier New", monospace;
+  }
+  .link {
+    fill: none;
+    stroke: #ef4444;
+    stroke-width: 3;
+    stroke-linecap: butt;
+    stroke-linejoin: round;
+    opacity: 0.8;
+  }
+  .table.dimmed .table-outline { stroke: #e5e7eb; fill: #fafafa; }
+  .table.dimmed .header { fill: #e5e7eb; }
+  .table.dimmed .title { fill: #9ca3af; }
+  .table.dimmed .row { fill: #ffffff; }
+  .table.dimmed .row.alt { fill: #f8fafc; }
+  .table.dimmed .cell-name { fill: #9ca3af; }
+  .table.dimmed .cell-type { fill: #cbd5e1; }
+  .link.dimmed { stroke: #d1d5db !important; opacity: 0.6; }
+  .cardmark.dimmed { fill: #9ca3af !important; stroke: #ffffff; }
+  .cardmark {
+    font-size: 14px;
+    font-weight: 800;
+    fill: #dc2626;
+    pointer-events: none;
+    user-select: none;
+    stroke: white;
+    stroke-width: 3;
+    paint-order: stroke fill;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+  .font-mono::-webkit-scrollbar {
+    width: 8px;
+  }
+  .font-mono::-webkit-scrollbar-track {
+    background: #374151;
+  }
+  .font-mono::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 4px;
+  }
+  .font-mono::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+  [data-erd-target="leftPane"] {
+    backface-visibility: hidden;
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+
+  [data-erd-target="leftPane"].collapsed {
+    pointer-events: none;
+  }
+</style>
+<style>
+  .btn-toggle {
+    transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), background-color 200ms, color 200ms;
+    will-change: transform;
+  }
+  .btn-toggle.collapsed {
+    transform: rotate(180deg) scale(1.05);
+  }
+  .btn-toggle:hover {
+    transform: translateY(-1px);
+  }
+</style>
+

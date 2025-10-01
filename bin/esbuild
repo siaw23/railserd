@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -e
+APP_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$APP_ROOT"
+
+if ! command -v esbuild >/dev/null 2>&1; then
+  if [ -f package.json ]; then
+    npm install --no-audit --no-fund --no-optional esbuild
+  else
+    printf '{"private":true,"devDependencies":{"esbuild":"^0.21.0"}}' > package.json
+    npm install --no-audit --no-fund --no-optional
+  fi
+fi
+
+./node_modules/.bin/esbuild app/javascript/application.js \
+  --bundle \
+  --sourcemap \
+  --loader:.js=js \
+  --outdir=app/assets/builds \
+  --public-path=/assets \
+  --define:process.env.NODE_ENV=\"${RAILS_ENV:-development}\" \
+  $( [ "${RAILS_ENV}" = "production" ] && echo "--minify" )
+

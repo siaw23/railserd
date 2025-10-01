@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= meta_title %></title>
+    <script defer data-domain="railserd.com" src="https://plausible.io/js/script.js"></script>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Rails ERD Generator">
+    <meta name="mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <!-- HTML Meta Tags -->
+    <meta name="description" content="<%= meta_description %>">
+
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="<%= meta_url %>">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<%= meta_title %>">
+    <meta property="og:description" content="<%= meta_description %>">
+    <meta property="og:image" content="<%= meta_image_url %>">
+    <meta property="og:image:alt" content="Rails ERD Generator ERD preview">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:domain" content="railserd.com">
+    <meta property="twitter:url" content="<%= meta_url %>">
+    <meta name="twitter:title" content="<%= meta_title %>">
+    <meta name="twitter:description" content="<%= meta_description %>">
+    <meta name="twitter:image" content="<%= meta_image_url %>">
+
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "application", defer: true, "data-turbo-track": "reload" %>
+    <!-- Mobile block handled server-side in ApplicationController -->
+  </head>
+
+  <body class="<%= content_for?(:body_class) ? (yield :body_class) : "" %>">
+    <main class="<%= content_for?(:main_class) ? (yield :main_class) : "container mx-auto mt-28 px-5 flex" %>">
+      <%= yield %>
+    </main>
+  </body>
+</html>

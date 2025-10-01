@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+# Skipping database preparation because this app does not use a database
+
+exec "${@}"
