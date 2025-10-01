@@ -74,6 +74,13 @@
         </div>
         <!-- Highlight depth selector + Search -->
         <div class="fixed bottom-4 right-32 flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50 items-stretch" data-erd-target="depthControls">
+          <button type="button"
+                  class="px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 transition-all duration-200 focus:outline-none focus:ring-0 rounded-l-lg"
+                  data-action="click->erd#toggleCompactTables"
+                  data-erd-target="compactButton"
+                  title="Toggle compact view for tables with more than 3 columns">
+            Compact 3+
+          </button>
           <div class="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border-r border-gray-200 flex items-center">
             Highlight Depth
           </div>

@@ -5,7 +5,7 @@ import { LinkColorManager } from "./link_color_manager"
 import { LayoutManager } from "./layout_manager"
 
 export default class extends Controller {
-  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput"]
+  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton"]
 
   connect() {
     this.root = d3.select(this.svgTarget).append("g")
@@ -100,6 +100,71 @@ export default class extends Controller {
   csrfToken() {
     const el = document.querySelector('meta[name="csrf-token"]')
     return el ? el.getAttribute('content') : ''
+  }
+
+  toggleCompactTables() {
+    this._isCompact = !this._isCompact
+    if (this.hasCompactButtonTarget) {
+      const btn = this.compactButtonTarget
+      btn.classList.toggle('bg-red-600', this._isCompact)
+      btn.classList.toggle('text-white', this._isCompact)
+      btn.classList.toggle('text-gray-700', !this._isCompact)
+      btn.classList.toggle('hover:bg-gray-50', !this._isCompact)
+      btn.classList.toggle('hover:bg-red-700', this._isCompact)
+    }
+    const gTable = this.tableLayer.selectAll('.table')
+    const DURATION = 260
+    const self = this
+    gTable.each(function(d) {
+      const g = d3.select(this)
+      const extras = g.selectAll('[data-extra="1"]')
+      const outline = g.select('rect.table-outline')
+      const rowsCount = d.fields.length
+      const fullHeight = d.fullH
+      const compactHeight = d.compactH
+      const targetHeight = self._isCompact ? compactHeight : fullHeight
+      // animate outline height and keep links in sync by updating d.h during tween
+      const startHeight = typeof d.h === 'number' ? d.h : +outline.attr('height') || fullHeight
+      const trans = outline.transition().duration(DURATION).attr('height', targetHeight)
+      trans.tween('relink', function() {
+        let rafPending = false
+        return function(t) {
+          d.h = startHeight + (targetHeight - startHeight) * t
+          if (!rafPending) {
+            rafPending = true
+            requestAnimationFrame(() => {
+              rafPending = false
+              if (self._updateLinks) self._updateLinks()
+            })
+          }
+        }
+      }).on('end', function() {
+        d.h = targetHeight
+        if (self._updateLinks) self._updateLinks()
+      })
+      // animate header path height by redrawing path
+      const header = g.select('path.header')
+      const roundedTopRectPath = (width, height, r) => {
+        const w = width; const h = height; const rr = Math.min(r, w / 2, h); return `M0,${rr} Q0,0 ${rr},0 H${w - rr} Q${w},0 ${w},${rr} V${h} H0 Z`
+      }
+      header.transition().duration(DURATION).attrTween('d', function() {
+        const width = d.w
+        const start = header.attr('d')
+        const end = roundedTopRectPath(width, self._HDR_H, 8)
+        // header height stays constant; we tween anyway for smoothness
+        return () => end
+      })
+
+      if (extras.empty()) return
+      if (self._isCompact) {
+        extras.transition().duration(DURATION).attr('opacity', 0).on('end', function() { d3.select(this).style('display', 'none') })
+      } else {
+        extras.style('display', null).transition().duration(DURATION).attr('opacity', 1)
+      }
+    })
+
+    // After batch resizing kicked off, perform a final reflow
+    if (this._updateLinks) this._updateLinks()
   }
 
   clear(showEmpty = true) {
@@ -266,6 +331,9 @@ export default class extends Controller {
 
 
     const PADX = 18, ROW_H = 28, HDR_H = 34, MIN_W = 260, NAME_TYPE_GAP = 18
+    this._isCompact = this._isCompact ?? false
+    // expose sizes for toggling later
+    this._ROW_H = ROW_H; this._HDR_H = HDR_H
 
 
     const measureLayer = d3.select(this.svgTarget)
@@ -295,12 +363,16 @@ export default class extends Controller {
 
       const contentW = Math.max(titleW, maxNameW + NAME_TYPE_GAP + maxTypeW)
       t.w = Math.max(MIN_W, PADX + contentW + PADX)
-      t.h = HDR_H + t.fields.length * ROW_H
+      t.fullH = HDR_H + t.fields.length * ROW_H
+      t.compactH = HDR_H + Math.min(3, t.fields.length) * ROW_H
+      t.h = this._isCompact ? t.compactH : t.fullH
     })
 
 
     measureLayer.remove()
     const byId = Object.fromEntries(tables.map((t) => [t.id, t]))
+    this._byId = byId
+    this._tables = tables
 
     // Build quick lookup for search by lowercase id
     this._tableByLowerId = Object.fromEntries(tables.map((t) => [String(t.id).toLowerCase(), t]))
@@ -339,7 +411,6 @@ export default class extends Controller {
     this.clear(false)
 
 
-    const self = this
     function dragstart(event, d) { d3.select(this).raise() }
     let rafPending = false
     function dragged(event, d) {
@@ -380,16 +451,26 @@ export default class extends Controller {
     gTable.append("text").attr("class", "title")
       .attr("x", PADX).attr("y", HDR_H / 2 + 5).text((d) => d.id)
 
+    const self = this
     gTable.each(function (d) {
       const g = d3.select(this)
       d.fields.forEach((f, i) => {
         const y = HDR_H + i * ROW_H
-        g.append("rect").attr("class", "row" + (i % 2 ? " alt" : ""))
+        const row = g.append("rect").attr("class", "row" + (i % 2 ? " alt" : ""))
           .attr("x", 0).attr("y", y).attr("width", d.w).attr("height", ROW_H)
-        g.append("text").attr("class", "cell-name")
+        const name = g.append("text").attr("class", "cell-name")
           .attr("x", PADX).attr("y", y + ROW_H / 2 + 5).text(f[0])
-        g.append("text").attr("class", "cell-type")
+        const type = g.append("text").attr("class", "cell-type")
           .attr("x", d.w - PADX).attr("y", y + ROW_H / 2 + 5).text(f[1])
+
+        if (i >= 3) {
+          const initialOpacity = (typeof window.__erdCompactInit === 'boolean' ? (window.__erdCompactInit ? 0 : 1) : (self._isCompact ? 0 : 1))
+          const display = initialOpacity === 0 ? "none" : null
+          row.attr("data-extra", "1").attr("opacity", initialOpacity)
+          name.attr("data-extra", "1").attr("opacity", initialOpacity)
+          type.attr("data-extra", "1").attr("opacity", initialOpacity)
+          if (display === "none") { row.style("display", "none"); name.style("display", "none"); type.style("display", "none") }
+        }
       })
     })
 
@@ -404,11 +485,13 @@ export default class extends Controller {
         eLab: this.labelLayer.append("text").attr("class", "cardmark").style("fill", color)
       }
     })
+    this._linkObjs = linkObjs
 
     const updateLinks = () => {
       const updateFn = this.layoutManager.updateLinks(linkObjs, byId)
       updateFn()
     }
+    this._updateLinks = updateLinks
 
 
 

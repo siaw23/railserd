@@ -53,6 +53,8 @@ document.addEventListener("turbo:load", () => {
 # • Click a table to highlight its connected tables.
 # • Use the “Highlight Depth” control to show hops.
 # • Search to bring a model into focus.
+# • Press "Compact 3+" to collapse tables
+#   with > 3 columns.
 #
 # Paste your schema.rb content in this pane.
 
