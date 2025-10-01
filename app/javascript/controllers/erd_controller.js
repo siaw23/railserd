@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
 import { ZoomManager } from "./zoom_manager"
+import { LinkColorManager } from "./link_color_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput"]
@@ -15,6 +16,8 @@ export default class extends Controller {
       minScale: 0.2,
       maxScale: 3
     })
+
+    this.linkColorManager = new LinkColorManager()
 
     const container = this.svgTarget.parentElement
     if (container) {
@@ -117,6 +120,9 @@ export default class extends Controller {
         minScale: 0.2,
         maxScale: 3
       })
+    }
+    if (this.linkColorManager) {
+      this.linkColorManager.reset()
     }
   }
 
@@ -476,15 +482,8 @@ export default class extends Controller {
     })
 
 
-    const linkColorPalette = [
-      "#ef4444", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899",
-      "#06b6d4", "#14b8a6", "#84cc16", "#e11d48", "#0ea5e9", "#22c55e",
-      "#a855f7", "#f43f5e", "#f97316", "#eab308", "#38bdf8", "#34d399",
-      "#60a5fa", "#a3e635", "#fb923c", "#c084fc", "#fbbf24", "#4ade80"
-    ]
-
     const linkObjs = rels.map((r, idx) => {
-      const color = linkColorPalette[idx % linkColorPalette.length]
+      const color = this.linkColorManager.getColorByIndex(idx)
       return {
         ...r,
         color,
