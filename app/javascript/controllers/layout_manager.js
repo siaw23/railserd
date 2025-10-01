@@ -203,24 +203,46 @@ export class LayoutManager {
    * @param {Array} pts - Array of points
    * @returns {Array} - Simplified array of points
    */
-  simplifyOrthogonal(pts) {
+  simplifyOrthogonal(pts, epsilon = 2) {
     if (pts.length <= 2) return pts
-    const res = [pts[0]]
-    for (let i = 1; i < pts.length - 1; i++) {
-      const a = res[res.length - 1]
-      const b = pts[i]
-      const c = pts[i + 1]
+    const eq = (a, b) => Math.abs(a - b) <= epsilon
 
-      if (i === 1 || i === pts.length - 2) { res.push(b); continue }
-      const abH = a.y === b.y, bcH = b.y === c.y
-      const abV = a.x === b.x, bcV = b.x === c.x
-      if ((abH && bcH) || (abV && bcV)) {
-        // collinear, skip b
-        continue
+    // First pass: snap nearly-aligned coordinates
+    const snapped = pts.map(p => ({ x: p.x, y: p.y }))
+    for (let i = 0; i < snapped.length - 1; i++) {
+      const curr = snapped[i]
+      const next = snapped[i + 1]
+      if (eq(curr.x, next.x)) {
+        const avgX = (curr.x + next.x) / 2
+        curr.x = avgX
+        next.x = avgX
       }
+      if (eq(curr.y, next.y)) {
+        const avgY = (curr.y + next.y) / 2
+        curr.y = avgY
+        next.y = avgY
+      }
+    }
+
+    // Second pass: remove redundant points
+    const res = [snapped[0]]
+    for (let i = 1; i < snapped.length - 1; i++) {
+      const a = res[res.length - 1]
+      const b = snapped[i]
+      const c = snapped[i + 1]
+
+      const abH = eq(a.y, b.y), bcH = eq(b.y, c.y)
+      const abV = eq(a.x, b.x), bcV = eq(b.x, c.x)
+
+      // Skip collinear points
+      if ((abH && bcH) || (abV && bcV)) continue
+
+      // Skip if creates tiny dogleg
+      if (eq(a.y, c.y) && eq(a.x, c.x)) continue
+
       res.push(b)
     }
-    res.push(pts[pts.length - 1])
+    res.push(snapped[snapped.length - 1])
     return res
   }
 
@@ -262,6 +284,13 @@ export class LayoutManager {
       const prev = pts[i - 1]
       const curr = pts[i]
       const next = pts[i + 1]
+
+      const eq = (a, b) => Math.abs(a - b) <= 2
+      // If three consecutive points are effectively collinear, keep it as a straight segment
+      if ((eq(prev.y, curr.y) && eq(curr.y, next.y)) || (eq(prev.x, curr.x) && eq(curr.x, next.x))) {
+        path += ` L${curr.x},${curr.y}`
+        continue
+      }
 
       // Calculate distances to ensure we don't over-round
       const d1 = Math.sqrt((curr.x - prev.x) ** 2 + (curr.y - prev.y) ** 2)
@@ -332,30 +361,37 @@ export class LayoutManager {
 
       const s0 = pts[0], s1 = pts[1]
       const eN = pts.length - 1, e0 = pts[eN - 1], e1 = pts[eN]
-      const sMid = { x: (s0.x + s1.x) / 2, y: (s0.y + s1.y) / 2 }
-      const eMid = { x: (e0.x + e1.x) / 2, y: (e0.y + e1.y) / 2 }
-
-      const sHoriz = (s0.y === s1.y), eHoriz = (e0.y === e1.y)
+      const eq = (a,b) => Math.abs(a-b) <= 1.5
+      const sHoriz = eq(s0.y, s1.y), eHoriz = eq(e0.y, e1.y)
+      const LABEL_NEAR = 14
+      const startDir = { x: Math.sign(s1.x - s0.x) || 0, y: Math.sign(s1.y - s0.y) || 0 }
+      const endDir = { x: Math.sign(e1.x - e0.x) || 0, y: Math.sign(e1.y - e0.y) || 0 }
+      const sNear = sHoriz
+        ? { x: s0.x + LABEL_NEAR * (startDir.x || 1), y: s0.y }
+        : { x: s0.x, y: s0.y + LABEL_NEAR * (startDir.y || 1) }
+      const eNear = eHoriz
+        ? { x: e1.x - LABEL_NEAR * (endDir.x || 1), y: e1.y }
+        : { x: e1.x, y: e1.y - LABEL_NEAR * (endDir.y || 1) }
       const sText = L.fromCard === "1" ? "1" : "*"
       const eText = L.toCard === "1" ? "1" : "*"
 
       if (sHoriz) {
-        updates.push(() => L.sLab.text(sText).attr("x", sMid.x).attr("y", sMid.y - off - 2)
-          .attr("text-anchor", "middle").attr("dominant-baseline", "central"))
+        updates.push(() => L.sLab.text(sText).attr("x", sNear.x).attr("y", sNear.y - off - 2)
+          .attr("text-anchor", startDir.x >= 0 ? "start" : "end").attr("dominant-baseline", "central"))
       } else {
         const right = s1.x > s0.x
         const near = right ? -off : off
-        updates.push(() => L.sLab.text(sText).attr("x", sMid.x + near).attr("y", sMid.y)
+        updates.push(() => L.sLab.text(sText).attr("x", sNear.x + near).attr("y", sNear.y)
           .attr("text-anchor", right ? "end" : "start").attr("dominant-baseline", "central"))
       }
 
       if (eHoriz) {
-        updates.push(() => L.eLab.text(eText).attr("x", eMid.x).attr("y", eMid.y - off - 2)
-          .attr("text-anchor", "middle").attr("dominant-baseline", "central"))
+        updates.push(() => L.eLab.text(eText).attr("x", eNear.x).attr("y", eNear.y - off - 2)
+          .attr("text-anchor", endDir.x >= 0 ? "end" : "start").attr("dominant-baseline", "central"))
       } else {
         const right = e1.x > e0.x
         const near = right ? -off : off
-        updates.push(() => L.eLab.text(eText).attr("x", eMid.x + near).attr("y", eMid.y)
+        updates.push(() => L.eLab.text(eText).attr("x", eNear.x + near).attr("y", eNear.y)
           .attr("text-anchor", right ? "end" : "start").attr("dominant-baseline", "central"))
       }
 
