@@ -443,6 +443,13 @@ export default class extends Controller {
     if (!q) {
       gTable.classed('dimmed', false)
       linkObjs.forEach((L) => { L.p.classed('dimmed', false); L.sLab.classed('dimmed', false); L.eLab.classed('dimmed', false) })
+      if (this._searchPreviousPosition) {
+        this.zoomManager.panToPoint(this._searchPreviousPosition.x, this._searchPreviousPosition.y, {
+          animate: true,
+          duration: 450
+        })
+        this._searchPreviousPosition = null
+      }
       return
     }
     const match = (this._tableByLowerId || {})[q]
@@ -458,6 +465,10 @@ export default class extends Controller {
       L.sLab.classed('dimmed', !onPath)
       L.eLab.classed('dimmed', !onPath)
     })
+
+    if (!this._searchPreviousPosition) {
+      this._searchPreviousPosition = this.zoomManager.getCurrentCenter()
+    }
 
     const targetCx = match.x + match.w / 2
     const targetCy = match.y + match.h / 2

@@ -67,6 +67,21 @@ export class ZoomManager {
   }
 
   /**
+   * Get the current center point of the viewport in ERD coordinates
+   * @returns {Object} - {x, y} coordinates
+   */
+  getCurrentCenter() {
+    const container = this.svgElement.parentElement
+    if (!container) return { x: 0, y: 0 }
+
+    const transform = this.getCurrentTransform()
+    const centerX = (container.clientWidth / 2 - transform.x) / transform.k
+    const centerY = (container.clientHeight / 2 - transform.y) / transform.k
+
+    return { x: centerX, y: centerY }
+  }
+
+  /**
    * Fit content to viewport with padding
    * @param {Object} bounds - Content bounds {minX, minY, maxX, maxY}
    * @param {Object} options - Fitting options
