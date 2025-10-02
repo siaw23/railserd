@@ -11,6 +11,21 @@ export class TableRenderer {
       .attr("class", "table")
       .attr("transform", (d) => `translate(${d.x},${d.y})`)
 
+    gTable.each(function(d) {
+      const g = d3.select(this)
+      const clipId = `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')}`
+
+      const defs = g.append("defs")
+      const clipPath = defs.append("clipPath").attr("id", clipId)
+      clipPath.append("rect")
+        .attr("width", d.w)
+        .attr("height", d.h)
+        .attr("rx", 8)
+        .attr("ry", 8)
+
+      g.attr("clip-path", `url(#${clipId})`)
+    })
+
     gTable.append("rect").attr("class", "table-outline")
       .attr("width", (d) => d.w).attr("height", (d) => d.h)
 

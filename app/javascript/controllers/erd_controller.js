@@ -146,7 +146,6 @@ export default class extends Controller {
         d.h = targetHeight
         if (self._updateLinks) self._updateLinks()
       })
-      // animate header path height by redrawing path
       const header = g.select('path.header')
       const roundedTopRectPath = (width, height, r) => {
         const w = width; const h = height; const rr = Math.min(r, w / 2, h); return `M0,${rr} Q0,0 ${rr},0 H${w - rr} Q${w},0 ${w},${rr} V${h} H0 Z`
@@ -155,7 +154,6 @@ export default class extends Controller {
         const width = d.w
         const start = header.attr('d')
         const end = roundedTopRectPath(width, self._HDR_H, 8)
-        // header height stays constant; we tween anyway for smoothness
         return () => end
       })
 
