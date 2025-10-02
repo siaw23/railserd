@@ -1,6 +1,6 @@
 import "@hotwired/turbo-rails"
 import "./controllers"
-import { createIcons, FileText, Plus, Minus, Github } from "lucide"
+import { createIcons, FileText, Plus, Minus, Github, Share2 } from "lucide"
 import * as monaco from "monaco-editor"
 
 function currentSchemaVersion() {
@@ -15,8 +15,35 @@ function currentSchemaVersion() {
   return `${yyyy}_${mm}_${dd}_${HH}${MM}${SS}`
 }
 
+function getSchemaFromURL() {
+  const hash = window.location.hash.slice(1) // Remove leading '#'
+  if (!hash) return null
+
+  const params = new URLSearchParams(hash)
+  const encodedSchema = params.get('schema')
+
+  if (!encodedSchema) return null
+
+  try {
+    // Decode URL-safe Base64
+    const base64 = encodedSchema.replace(/-/g, '+').replace(/_/g, '/')
+    const binaryString = atob(base64)
+
+    // Convert binary string back to UTF-8
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    const decoded = new TextDecoder().decode(bytes)
+    return decoded
+  } catch (e) {
+    console.error('Failed to decode schema from URL:', e)
+    return null
+  }
+}
+
 document.addEventListener("turbo:load", () => {
-  try { createIcons({ icons: { FileText, Plus, Minus, Github } }) } catch {}
+  try { createIcons({ icons: { FileText, Plus, Minus, Github, Share2 } }) } catch {}
 
   const leftPane = document.querySelector('[data-erd-target="leftPane"]')
   const textarea = leftPane && leftPane.querySelector('[data-erd-target="input"]')
@@ -126,7 +153,8 @@ ActiveRecord::Schema.define(version: ${version}) do
 
 end`
 
-  const initialValue = (textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample
+  const urlSchema = getSchemaFromURL()
+  const initialValue = urlSchema || (textarea.value && textarea.value.trim().length > 0 ? textarea.value : defaultSample)
   const editor = monaco.editor.create(container, {
     value: initialValue,
     language: "ruby",
@@ -161,4 +189,10 @@ end`
   editor.onDidChangeModelContent(syncToTextarea)
   // Kick off initial render
   syncToTextarea()
+
+  // Clean URL hash after loading schema from URL
+  if (urlSchema) {
+    window.history.replaceState({}, '', window.location.pathname)
+    console.log('Schema loaded from share link')
+  }
 })

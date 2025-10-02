@@ -60,10 +60,18 @@
       </div>
       <div class="flex-1 relative overflow-auto">
         <svg data-erd-target="svg" class="block min-w-full min-h-full"></svg>
-        <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
-           class="absolute top-3 left-3 inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200">
-          <i data-lucide="github" class="w-4 h-4"></i>
-        </a>
+        <div class="absolute top-3 left-3 flex gap-2">
+          <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200">
+            <i data-lucide="github" class="w-4 h-4"></i>
+          </a>
+          <button type="button"
+                  class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-red-600 hover:bg-red-700 text-white shadow border border-red-700"
+                  data-action="click->erd#shareSchema"
+                  title="Share this schema via URL">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+          </button>
+        </div>
         <div class="fixed bottom-4 right-4 flex flex-row gap-2 z-50">
           <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
                   data-action="click->erd#zoomIn" title="Zoom in">

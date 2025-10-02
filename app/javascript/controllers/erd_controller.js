@@ -317,6 +317,37 @@ export default class extends Controller {
     }
   }
 
+  shareSchema() {
+    const schema = this.inputTarget.value
+    if (!schema || !schema.trim()) {
+      alert('No schema to share. Please add your schema first.')
+      return
+    }
+
+    try {
+      // Encode UTF-8 string to Base64 (handles Unicode characters)
+      const utf8Bytes = new TextEncoder().encode(schema)
+      const binaryString = Array.from(utf8Bytes, byte => String.fromCharCode(byte)).join('')
+      const encoded = btoa(binaryString)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '') // Remove padding
+
+      const url = `${window.location.origin}${window.location.pathname}#schema=${encoded}`
+
+      // Copy to clipboard
+      navigator.clipboard.writeText(url).then(() => {
+        alert('Share link copied to clipboard!')
+      }).catch(() => {
+        // Fallback: show URL in prompt for manual copy
+        prompt('Copy this URL to share:', url)
+      })
+    } catch (e) {
+      console.error('Failed to generate share link:', e)
+      alert('Failed to generate share link. Schema might be too large.')
+    }
+  }
+
   render(graph) {
     const tables = graph.nodes.map((n, i) => ({
       id: n.id,
