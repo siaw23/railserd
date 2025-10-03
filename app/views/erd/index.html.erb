@@ -1,6 +1,14 @@
 <% content_for :body_class do %>h-screen<% end %>
 <% content_for :main_class do %>h-screen p-0 m-0 max-w-none<% end %>
-<div class="h-full w-full bg-gray-50" data-controller="erd">
+<div class="h-full w-full bg-gray-50" data-controller="erd" data-erd-initial-graph-value='<%= @initial_graph.present? ? @initial_graph.to_json : "" %>'>
+  <!-- Toast notification -->
+  <div data-erd-target="toast"
+       class="fixed top-4 right-4 z-[100] bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg border border-gray-700 flex items-center gap-2 transform translate-x-[120%] transition-transform duration-300 ease-in-out">
+    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span class="text-sm font-medium">Share link copied to clipboard!</span>
+  </div>
   <div class="flex h-full relative">
     <div class="flex-none bg-gray-900 border-r border-gray-300 flex flex-col overflow-hidden"
          data-erd-target="leftPane"
@@ -24,7 +32,7 @@
           placeholder=""
           class="w-full h-full bg-transparent text-gray-100 placeholder-gray-500 font-mono text-sm leading-relaxed p-4 border-0 outline-none resize-none focus:ring-0"
           spellcheck="false"
-        ></textarea>
+        ><%= @initial_schema.present? ? @initial_schema : "" %></textarea>
         <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
            class="absolute bottom-3 right-3 inline-flex items-center justify-center h-8 w-8 rounded-md bg-gray-800/70 hover:bg-gray-700 text-gray-200 shadow ring-1 ring-black/10">
           <i data-lucide="github" class="w-4 h-4"></i>
@@ -60,10 +68,18 @@
       </div>
       <div class="flex-1 relative overflow-auto">
         <svg data-erd-target="svg" class="block min-w-full min-h-full"></svg>
-        <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
-           class="absolute top-3 left-3 inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200">
-          <i data-lucide="github" class="w-4 h-4"></i>
-        </a>
+        <div class="absolute top-3 left-3 flex gap-2">
+          <a href="https://github.com/siaw23/railserd/" target="_blank" rel="noopener noreferrer"
+             class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200">
+            <i data-lucide="github" class="w-4 h-4"></i>
+          </a>
+          <button type="button"
+                  class="inline-flex items-center justify-center h-8 w-8 rounded-md bg-white/90 hover:bg-white text-gray-700 shadow border border-gray-200"
+                  data-action="click->erd#shareSchema"
+                  title="Share schema via URL">
+            <i data-lucide="share" class="w-4 h-4"></i>
+          </button>
+        </div>
         <div class="fixed bottom-4 right-4 flex flex-row gap-2 z-50">
           <button type="button" class="px-3 py-2 rounded-md bg-white shadow border border-gray-200 text-gray-700 hover:bg-gray-50"
                   data-action="click->erd#zoomIn" title="Zoom in">

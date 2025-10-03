@@ -7,9 +7,12 @@ import { HighlightManager } from "./highlight_manager"
 import { DEFAULT_GEOMETRY, createSvgTextMeasurer, applyTableDimensions, computeBoundsFromTables } from "./geometry"
 import { TableRenderer } from "./table_renderer"
 import { LinkRenderer } from "./link_renderer"
+import pako from "pako"
+import { createShortGraphLink, createShortSchemaLink } from "../services/share_service"
 
 export default class extends Controller {
-  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton"]
+  static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
+  static values = { initialGraph: String }
 
   connect() {
     this.root = d3.select(this.svgTarget).append("g")
@@ -40,10 +43,7 @@ export default class extends Controller {
     }
 
     this._debounceTimer = null
-
-
     this._lastRequestId = 0
-
 
     const saved = window.localStorage.getItem("erd:leftPane:collapsed")
     if (saved === "true") {
@@ -52,13 +52,38 @@ export default class extends Controller {
 
     // Ensure empty state shows on initial load before any parsing
     this.showEmptyState()
+
+    //Prefer server-embedded initial graph
+    const serverGraphJson = (this.hasInitialGraphValue && this.initialGraphValue) ? this.initialGraphValue : ""
+    if (serverGraphJson && serverGraphJson.trim() !== "") {
+      try {
+        const graph = JSON.parse(serverGraphJson)
+        this.resetCanvas()
+        this.render(graph)
+        // Ensure the editor pane is visible for shared links
+        this.expandPane(true)
+        return
+      } catch (_) {}
+    }
+
+    // Support direct ?s= compressed payload
+    const url = new URL(window.location.href)
+    const sParam = url.searchParams.get("s")
+    if (sParam) {
+      try {
+        const graph = this.decodeCompressedGraph(sParam)
+        if (graph) {
+          this.resetCanvas()
+          this.render(graph)
+          // Ensure  editor pane is visible for shared links
+          this.expandPane(true)
+          return
+        }
+      } catch (_) {}
+    }
   }
 
-
-  zoomBy(factor) {
-    this.zoomManager.zoomBy(factor)
-  }
-
+  zoomBy(factor) { this.zoomManager.zoomBy(factor) }
   zoomIn() { this.zoomManager.zoomIn() }
   zoomOut() { this.zoomManager.zoomOut() }
 
@@ -83,7 +108,6 @@ export default class extends Controller {
       })
       const data = await res.json().catch(() => ({}))
 
-
       if (requestId !== this._lastRequestId) return
 
       if (!res.ok) {
@@ -91,7 +115,6 @@ export default class extends Controller {
         this.clear(true)
         return
       }
-
 
       this.resetCanvas()
       this.render(data)
@@ -104,6 +127,79 @@ export default class extends Controller {
   csrfToken() {
     const el = document.querySelector('meta[name="csrf-token"]')
     return el ? el.getAttribute('content') : ''
+  }
+
+  // --- Sharing ---
+  shareGraph = async () => {
+    try {
+      const graph = this.captureCurrentGraph()
+      const url = await createShortGraphLink(graph, this.csrfToken())
+      this.copyLink(url)
+    } catch (e) {
+      console.error('Failed to share graph', e)
+      alert('Failed to generate share link.')
+    }
+  }
+
+  shareSchema = async () => {
+    const schema = this.hasInputTarget ? this.inputTarget.value : ''
+    if (!schema || !schema.trim()) {
+      alert('No schema to share. Please add your schema first.')
+      return
+    }
+    try {
+      const url = await createShortSchemaLink(schema, this.csrfToken())
+      this.copyLink(url)
+    } catch (e) {
+      console.error('Failed to generate schema link', e)
+      alert('Failed to generate schema share link.')
+    }
+  }
+
+  copyLink(url) {
+    navigator.clipboard.writeText(url).then(() => {
+      this.showToast()
+    }).catch(() => {
+      //  show URL in prompt for manual copy
+      prompt('Copy this URL to share:', url)
+    })
+  }
+
+  showToast() {
+    if (!this.hasToastTarget) return
+    const toast = this.toastTarget
+
+    // Slide in
+    toast.style.transform = 'translateX(0)'
+
+    // Slide out
+    setTimeout(() => {
+      toast.style.transform = 'translateX(120%)'
+    }, 3000)
+  }
+
+  decodeCompressedGraph(payload) {
+    const bin = this.base64urlToBytes(payload)
+    const inflated = pako.inflateRaw(bin)
+    const json = new TextDecoder().decode(inflated)
+    return JSON.parse(json)
+  }
+
+  base64urlToBytes(s) {
+    const replaced = s.replace(/-/g, '+').replace(/_/g, '/')
+    const pad = replaced.length % 4 === 0 ? 0 : 4 - (replaced.length % 4)
+    const withPad = replaced + '='.repeat(pad)
+    const binary = atob(withPad)
+    const out = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i)
+    return out
+  }
+
+  captureCurrentGraph() {
+    // Use current tables and links already rendered
+    const nodes = (this._tables || []).map(t => ({ id: t.id, fields: t.fields, x: t.x, y: t.y }))
+    const links = (this._linkObjs || []).map(L => ({ from: L.from, to: L.to, fromCard: L.fromCard, toCard: L.toCard }))
+    return { nodes, links }
   }
 
   toggleCompactTables() {
@@ -176,7 +272,6 @@ export default class extends Controller {
     if (showEmpty) this.showEmptyState(); else this.hideEmptyState()
   }
 
-
   resetCanvas() {
     const svgSel = d3.select(this.svgTarget)
     svgSel.selectAll("*").remove()
@@ -209,7 +304,6 @@ export default class extends Controller {
       this.emptyStateTarget.style.display = "none"
     }
   }
-
 
   togglePane() {
     const isCollapsed = this.leftPaneTarget.classList.contains('collapsed')

@@ -1,6 +1,6 @@
 import "@hotwired/turbo-rails"
 import "./controllers"
-import { createIcons, FileText, Plus, Minus, Github } from "lucide"
+import { createIcons, FileText, Plus, Minus, Github, Share } from "lucide"
 import * as monaco from "monaco-editor"
 
 function currentSchemaVersion() {
@@ -16,7 +16,7 @@ function currentSchemaVersion() {
 }
 
 document.addEventListener("turbo:load", () => {
-  try { createIcons({ icons: { FileText, Plus, Minus, Github } }) } catch {}
+  try { createIcons({ icons: { FileText, Plus, Minus, Github, Share } }) } catch {}
 
   const leftPane = document.querySelector('[data-erd-target="leftPane"]')
   const textarea = leftPane && leftPane.querySelector('[data-erd-target="input"]')
@@ -45,7 +45,7 @@ document.addEventListener("turbo:load", () => {
 # +----------------------------------------------+
 #
 # This app uses no database and does not store your schema.
-# No sessions, no persistence.
+# No sessions. Share links cached for 72 hours.
 # Your schema.rb remains private.
 #
 # Tips:
