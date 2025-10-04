@@ -14,6 +14,7 @@ import { CompactionManager } from "./compaction_manager"
 import { SearchManager } from "./search_manager"
 import { CanvasManager } from "./canvas_manager"
 import { ParseService } from "../services/parse_service"
+import { fitToViewport } from "./viewport_fit"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
@@ -258,15 +259,7 @@ export default class extends Controller {
 
     const bounds = computeBoundsFromTables(tables)
 
-    const fitToViewport = () => {
-      const reservedBottom = this.hasDepthControlsTarget ? (this.depthControlsTarget.offsetHeight + 24) : 0
-      this.zoomManager.fitToViewport(bounds, {
-        padding: 40,
-        reservedBottom,
-        animate: false
-      })
-    }
-    requestAnimationFrame(fitToViewport)
+    requestAnimationFrame(() => fitToViewport(this.zoomManager, bounds, this.hasDepthControlsTarget ? this.depthControlsTarget : null))
 
     this.clear(false)
 
@@ -310,7 +303,11 @@ export default class extends Controller {
 
     if (this.hasSearchInputTarget) {
       this.searchInputTarget.addEventListener('input', (e) => {
-        this.search.onInput(e)
+        const q = (e.target.value || '').trim().toLowerCase()
+        clearTimeout(this._searchTimer)
+        this._searchTimer = setTimeout(() => {
+          this.applySearchQuery(q, tables, linkObjs)
+        }, 220)
       })
     }
   }
