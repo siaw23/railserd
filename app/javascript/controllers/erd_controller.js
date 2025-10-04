@@ -9,12 +9,15 @@ import { TableRenderer } from "./table_renderer"
 import { LinkRenderer } from "./link_renderer"
 import pako from "pako"
 import { createShortGraphLink, createShortSchemaLink } from "../services/share_service"
+import { PaneManager } from "./pane_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
   static values = { initialGraph: String }
 
   connect() {
+    this.pane = new PaneManager(this)
+
     this.root = d3.select(this.svgTarget).append("g")
     this.linkLayer = this.root.append("g")
     this.labelLayer = this.root.append("g")
@@ -47,26 +50,22 @@ export default class extends Controller {
 
     const saved = window.localStorage.getItem("erd:leftPane:collapsed")
     if (saved === "true") {
-      this.collapsePane(true)
+      this.pane.collapse(true)
     }
 
-    // Ensure empty state shows on initial load before any parsing
     this.showEmptyState()
 
-    //Prefer server-embedded initial graph
     const serverGraphJson = (this.hasInitialGraphValue && this.initialGraphValue) ? this.initialGraphValue : ""
     if (serverGraphJson && serverGraphJson.trim() !== "") {
       try {
         const graph = JSON.parse(serverGraphJson)
         this.resetCanvas()
         this.render(graph)
-        // Ensure the editor pane is visible for shared links
-        this.expandPane(true)
+        this.pane.expand(true)
         return
       } catch (_) {}
     }
 
-    // Support direct ?s= compressed payload
     const url = new URL(window.location.href)
     const sParam = url.searchParams.get("s")
     if (sParam) {
@@ -75,8 +74,7 @@ export default class extends Controller {
         if (graph) {
           this.resetCanvas()
           this.render(graph)
-          // Ensure  editor pane is visible for shared links
-          this.expandPane(true)
+          this.pane.expand(true)
           return
         }
       } catch (_) {}
@@ -305,109 +303,10 @@ export default class extends Controller {
     }
   }
 
-  togglePane() {
-    const isCollapsed = this.leftPaneTarget.classList.contains('collapsed')
-    if (isCollapsed) {
-      this.expandPane()
-    } else {
-      this.collapsePane()
-    }
-  }
-
-  collapsePane(immediate = false) {
-    if (!this.hasLeftPaneTarget) return
-
-    const leftPane = this.leftPaneTarget
-    const rightPane = this.rightPaneTarget
-    const toggleBtn = this.hasToggleButtonTarget ? this.toggleButtonTarget : null
-
-
-    leftPane.classList.add('collapsed')
-
-
-    if (immediate) {
-      leftPane.style.transition = 'none'
-      if (rightPane) rightPane.style.transition = 'none'
-    } else {
-
-      if (!leftPane.style.transition || leftPane.style.transition === 'none') {
-        leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-      }
-      if (rightPane && (!rightPane.style.transition || rightPane.style.transition === 'none')) {
-        rightPane.style.transition = 'margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-      }
-    }
-
-    void leftPane.offsetWidth // reflow to ensure transition triggers
-    leftPane.style.transform = 'translate3d(-100%, 0, 0)'
-
-    if (rightPane) {
-      const leftPaneWidth = leftPane.offsetWidth
-      rightPane.style.marginLeft = `-${leftPaneWidth}px`
-    }
-
-
-    this.updateToggleIcons(true)
-    if (toggleBtn) toggleBtn.classList.add('collapsed')
-
-
-    window.localStorage.setItem("erd:leftPane:collapsed", "true")
-
-
-    if (immediate) {
-      setTimeout(() => {
-        leftPane.style.transition = ''
-        if (rightPane) rightPane.style.transition = ''
-      }, 50)
-    }
-  }
-
-  expandPane() {
-    if (!this.hasLeftPaneTarget) return
-
-    const leftPane = this.leftPaneTarget
-    const rightPane = this.rightPaneTarget
-    const toggleBtn = this.hasToggleButtonTarget ? this.toggleButtonTarget : null
-
-
-    leftPane.classList.remove('collapsed')
-
-
-    if (!leftPane.style.transition || leftPane.style.transition === 'none') {
-      leftPane.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-    }
-    void leftPane.offsetWidth
-    leftPane.style.transform = 'translate3d(0, 0, 0)'
-
-
-    if (rightPane) {
-      if (!rightPane.style.transition || rightPane.style.transition === 'none') {
-        rightPane.style.transition = 'margin-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-      }
-      rightPane.style.marginLeft = '0'
-    }
-
-
-    this.updateToggleIcons(false)
-    if (toggleBtn) toggleBtn.classList.remove('collapsed')
-
-
-    window.localStorage.setItem("erd:leftPane:collapsed", "false")
-  }
-
-  updateToggleIcons(collapsed) {
-    if (this.hasPanelLeftIconTarget && this.hasPanelRightIconTarget) {
-      if (collapsed) {
-
-        this.panelLeftIconTarget.classList.add('hidden')
-        this.panelRightIconTarget.classList.remove('hidden')
-      } else {
-
-        this.panelLeftIconTarget.classList.remove('hidden')
-        this.panelRightIconTarget.classList.add('hidden')
-      }
-    }
-  }
+  togglePane() { this.pane.toggle() }
+  collapsePane(immediate = false) { this.pane.collapse(immediate) }
+  expandPane(immediate = false) { this.pane.expand(immediate) }
+  updateToggleIcons(collapsed) { this.pane.updateIcons(collapsed) }
 
   render(graph) {
     const tables = graph.nodes.map((n, i) => ({
@@ -425,7 +324,6 @@ export default class extends Controller {
 
     this.hideEmptyState()
 
-
     this._isCompact = this._isCompact ?? false
     const measurer = createSvgTextMeasurer(this.svgTarget)
     const { PADX, ROW_H, HDR_H } = applyTableDimensions(
@@ -434,27 +332,22 @@ export default class extends Controller {
       DEFAULT_GEOMETRY,
       this._isCompact
     )
-    // expose sizes for toggling later
     this._ROW_H = ROW_H; this._HDR_H = HDR_H
     measurer.destroy()
     const byId = Object.fromEntries(tables.map((t) => [t.id, t]))
     this._byId = byId
     this._tables = tables
 
-    // Build quick lookup for search by lowercase id
     this._tableByLowerId = Object.fromEntries(tables.map((t) => [String(t.id).toLowerCase(), t]))
 
-    // Apply layout if needed
     const hasServerPositions = tables.every((t) => typeof t.x === "number" && typeof t.y === "number")
     if (!hasServerPositions) {
       this.layoutManager.applyForceLayout(tables, rels, byId)
     }
 
-    // Resolve any overlaps
     if (!tables.every((t) => typeof t.x === "number" && typeof t.y === "number")) {
       this.layoutManager.resolveOverlaps(tables, 28, 200)
     }
-
 
     const bounds = computeBoundsFromTables(tables)
 
@@ -468,30 +361,27 @@ export default class extends Controller {
     }
     requestAnimationFrame(fitToViewport)
 
-
     this.clear(false)
-
 
     function dragstart(event, d) { d3.select(this).raise() }
     let rafPending = false
+    const self = this
     function dragged(event, d) {
       d.x = event.x; d.y = event.y
       d3.select(this).attr("transform", `translate(${d.x},${d.y})`)
       if (!rafPending) {
         rafPending = true
-        requestAnimationFrame(() => { rafPending = false; updateLinks() })
+        requestAnimationFrame(() => { rafPending = false; if (self._updateLinks) self._updateLinks() })
       }
     }
     function dragend(event, d) {
-
       gTable.attr("transform", (dd) => `translate(${dd.x},${dd.y})`)
-      updateLinks()
+      if (self._updateLinks) self._updateLinks()
     }
 
     const tableRenderer = new TableRenderer()
     const gTable = tableRenderer.render(this.tableLayer, tables, { PADX, ROW_H, HDR_H })
       .call(d3.drag().on("start", dragstart).on("drag", dragged).on("end", dragend))
-
 
     const linkRenderer = new LinkRenderer(this.layoutManager)
     const { linkObjs, update } = linkRenderer.render(
@@ -501,28 +391,24 @@ export default class extends Controller {
       (idx) => this.linkColorManager.getColorByIndex(idx),
       byId
     )
-    const updateLinks = update
     this._linkObjs = linkObjs
-    this._updateLinks = updateLinks
+    this._updateLinks = update
 
-    updateLinks()
+    update()
 
-    // --- Highlight connected subgraph on click -------------------------------------------
     this.highlightManager?.destroy()
     this.highlightManager = new HighlightManager(this.svgTarget, this.tableLayer)
     this.highlightManager._highlightDepth = this._highlightDepth || '1'
     this.highlightManager.setup(tables, linkObjs, gTable, this.hasDepthControlsTarget ? this.depthControlsTarget : null)
 
-    // Hook up search box if present
-    if (this.hasSearchInputTarget) {
-      this.searchInputTarget.addEventListener('input', (e) => {
-        const q = (e.target.value || '').trim().toLowerCase()
-        clearTimeout(this._searchTimer)
-        this._searchTimer = setTimeout(() => {
-          this.applySearchQuery(q, tables, linkObjs)
-        }, 220)
-      })
-    }
+  }
+
+  onSearchInput(event) {
+    const q = (event?.target?.value || '').trim().toLowerCase()
+    clearTimeout(this._searchTimer)
+    this._searchTimer = setTimeout(() => {
+      this.applySearchQuery(q, this._tables || [], this._linkObjs || [])
+    }, 220)
   }
 
   setDepth(event) {
