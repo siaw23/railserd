@@ -13,6 +13,7 @@ import { PaneManager } from "./pane_manager"
 import { CompactionManager } from "./compaction_manager"
 import { SearchManager } from "./search_manager"
 import { CanvasManager } from "./canvas_manager"
+import { ParseService } from "../services/parse_service"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
@@ -22,6 +23,7 @@ export default class extends Controller {
     this.pane = new PaneManager(this)
     this.compaction = new CompactionManager(this)
     this.search = new SearchManager(this)
+    this.parser = new ParseService()
 
     this.root = null
     this.linkLayer = null
@@ -36,7 +38,6 @@ export default class extends Controller {
     this.canvas.initialize()
 
     this._debounceTimer = null
-    this._lastRequestId = 0
 
     const saved = window.localStorage.getItem("erd:leftPane:collapsed")
     if (saved === "true") {
@@ -46,7 +47,8 @@ export default class extends Controller {
     this.showEmptyState()
 
     const serverGraphJson = (this.hasInitialGraphValue && this.initialGraphValue) ? this.initialGraphValue : ""
-    if (serverGraphJson && serverGraphJson.trim() !== "") {
+    if (serverGraphJson && serverGraphJson.trim() !== ""
+    ) {
       try {
         const graph = JSON.parse(serverGraphJson)
         this.resetCanvas()
@@ -88,24 +90,17 @@ export default class extends Controller {
         return
       }
 
-      const requestId = ++this._lastRequestId
-      const res = await fetch("/erd/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRF-Token": this.csrfToken() },
-        body: JSON.stringify({ schema })
-      })
-      const data = await res.json().catch(() => ({}))
+      const result = await this.parser.parseSchema(schema)
+      if (result.cancelled) return
 
-      if (requestId !== this._lastRequestId) return
-
-      if (!res.ok) {
-        console.error("Parse error", data)
+      if (!result.ok) {
+        console.error("Parse error", result.data)
         this.clear(true)
         return
       }
 
       this.resetCanvas()
-      this.render(data)
+      this.render(result.data)
     } catch (err) {
       console.error("Unexpected error during parse/render", err)
       this.clear(true)
