@@ -1,3 +1,5 @@
+import { DEBOUNCE_SEARCH_MS, PAN_MS } from "./constants"
+
 export class SearchManager {
   constructor(controller) {
     this.controller = controller
@@ -10,7 +12,7 @@ export class SearchManager {
     clearTimeout(this.debounceTimer)
     this.debounceTimer = setTimeout(() => {
       this.apply(query)
-    }, 220)
+    }, DEBOUNCE_SEARCH_MS)
   }
 
   apply(query) {
@@ -22,7 +24,7 @@ export class SearchManager {
       tableSelection.classed('dimmed', false)
       linkObjects.forEach((linkObj) => { linkObj.p.classed('dimmed', false); linkObj.sLab.classed('dimmed', false); linkObj.eLab.classed('dimmed', false) })
       if (this.previousViewportCenter) {
-        this.controller.zoomManager.panToPoint(this.previousViewportCenter.x, this.previousViewportCenter.y, { animate: true, duration: 450 })
+        this.controller.zoomManager.panToPoint(this.previousViewportCenter.x, this.previousViewportCenter.y, { animate: true, duration: PAN_MS })
         this.previousViewportCenter = null
       }
       return
@@ -50,6 +52,6 @@ export class SearchManager {
 
     const targetCenterX = matchedTable.x + matchedTable.w / 2
     const targetCenterY = matchedTable.y + matchedTable.h / 2
-    this.controller.zoomManager.panToPoint(targetCenterX, targetCenterY, { animate: true, duration: 450 })
+    this.controller.zoomManager.panToPoint(targetCenterX, targetCenterY, { animate: true, duration: PAN_MS })
   }
 }

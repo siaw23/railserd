@@ -1,4 +1,5 @@
 import * as d3 from "d3"
+import { OFFSETS, CSS } from "./constants"
 
 export class HighlightManager {
   constructor(svgElement, tableLayerSelection) {
@@ -58,11 +59,11 @@ export class HighlightManager {
     buttons.forEach((button) => {
       const depthVal = button.getAttribute('data-erd-depth')
       if ((this._highlightDepth || '1') === depthVal) {
-        button.classList.add('bg-red-600', 'text-white')
-        button.classList.remove('text-gray-700', 'hover:bg-gray-50')
+        CSS.depthActive.forEach((c) => button.classList.add(c))
+        CSS.depthInactive.forEach((c) => button.classList.remove(c))
       } else {
-        button.classList.remove('bg-red-600', 'text-white')
-        button.classList.add('text-gray-700', 'hover:bg-gray-50')
+        CSS.depthActive.forEach((c) => button.classList.remove(c))
+        CSS.depthInactive.forEach((c) => button.classList.add(c))
       }
     })
   }
@@ -105,7 +106,7 @@ export class HighlightManager {
   }
 
   _attachPointerHandlers() {
-    const CLICK_MOVE_THRESHOLD_PX = 5
+    const CLICK_MOVE_THRESHOLD_PX = OFFSETS.clickMoveThresholdPx
     this._pendingTap = null
 
     const handlePointerDown = (event, d) => {
@@ -140,7 +141,6 @@ export class HighlightManager {
       .on("pointerup.highlight", handlePointerUp)
       .on("pointercancel.highlight", handlePointerCancel)
 
-    // Cleanup handler to remove listeners if needed
     this.cleanupHandlers.push(() => {
       this.tableSelection
         .on("pointerdown.highlight", null)
