@@ -12,6 +12,7 @@ import { createShortGraphLink, createShortSchemaLink } from "../services/share_s
 import { PaneManager } from "./pane_manager"
 import { CompactionManager } from "./compaction_manager"
 import { SearchManager } from "./search_manager"
+import { CanvasManager } from "./canvas_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
@@ -22,32 +23,17 @@ export default class extends Controller {
     this.compaction = new CompactionManager(this)
     this.search = new SearchManager(this)
 
-    this.root = d3.select(this.svgTarget).append("g")
-    this.linkLayer = this.root.append("g")
-    this.labelLayer = this.root.append("g")
-    this.tableLayer = this.root.append("g")
+    this.root = null
+    this.linkLayer = null
+    this.labelLayer = null
+    this.tableLayer = null
 
-    this.zoomManager = new ZoomManager(this.svgTarget, this.root, {
-      minScale: 0.2,
-      maxScale: 3
-    })
-
+    this.zoomManager = new ZoomManager(this.svgTarget, d3.select(this.svgTarget).append("g"), { minScale: 0.2, maxScale: 3 })
     this.linkColorManager = new LinkColorManager()
     this.layoutManager = new LayoutManager()
 
-    const container = this.svgTarget.parentElement
-    if (container) {
-      const multiplier = 1
-      const canW = Math.max(1, container.clientWidth * multiplier)
-      const canH = Math.max(1, container.clientHeight * multiplier)
-      this.canvasWidth = canW
-      this.canvasHeight = canH
-      const svgSel = d3.select(this.svgTarget)
-      svgSel.attr("viewBox", `0 0 ${canW} ${canH}`)
-      svgSel.attr("width", canW).attr("height", canH)
-      container.scrollLeft = Math.max(0, (canW - container.clientWidth) / 2)
-      container.scrollTop = Math.max(0, (canH - container.clientHeight) / 2)
-    }
+    this.canvas = new CanvasManager(this)
+    this.canvas.initialize()
 
     this._debounceTimer = null
     this._lastRequestId = 0
@@ -215,26 +201,7 @@ export default class extends Controller {
     if (showEmpty) this.showEmptyState(); else this.hideEmptyState()
   }
 
-  resetCanvas() {
-    const svgSel = d3.select(this.svgTarget)
-    svgSel.selectAll("*").remove()
-    this.root = svgSel.append("g")
-    this.linkLayer = this.root.append("g")
-    this.labelLayer = this.root.append("g")
-    this.tableLayer = this.root.append("g")
-    if (this.zoomManager) {
-      this.zoomManager = new ZoomManager(this.svgTarget, this.root, {
-        minScale: 0.2,
-        maxScale: 3
-      })
-    }
-    if (this.linkColorManager) {
-      this.linkColorManager.reset()
-    }
-    if (this.layoutManager) {
-      this.layoutManager = new LayoutManager()
-    }
-  }
+  resetCanvas() { this.canvas.reset() }
 
   showEmptyState() {
     if (this.hasEmptyStateTarget) {

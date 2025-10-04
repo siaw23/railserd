@@ -7,26 +7,26 @@ export class HighlightManager {
     this._highlightId = null
     this._highlightDepth = '1'
     this._pendingTap = null
-    this._cleanupFns = []
+    this.cleanupHandlers = []
   }
 
-  setup(tables, linkObjs, gTable, depthControlsEl = null) {
+  setup(tables, linkObjects, tableSelection, depthControlsElement = null) {
     this.tables = tables
-    this.linkObjs = linkObjs
-    this.gTable = gTable
-    this.depthControlsEl = depthControlsEl
+    this.linkObjects = linkObjects
+    this.tableSelection = tableSelection
+    this.depthControlsElement = depthControlsElement
 
     // Build adjacency for reachable calculation
-    const adjacency = new Map()
-    tables.forEach((t) => adjacency.set(t.id, new Set()))
-    const rels = linkObjs.map((L) => ({ from: L.from, to: L.to }))
-    rels.forEach((r) => {
-      if (!adjacency.has(r.from)) adjacency.set(r.from, new Set())
-      if (!adjacency.has(r.to)) adjacency.set(r.to, new Set())
-      adjacency.get(r.from).add(r.to)
-      adjacency.get(r.to).add(r.from)
+    const adjacencyMap = new Map()
+    tables.forEach((table) => adjacencyMap.set(table.id, new Set()))
+    const relations = linkObjects.map((link) => ({ from: link.from, to: link.to }))
+    relations.forEach((rel) => {
+      if (!adjacencyMap.has(rel.from)) adjacencyMap.set(rel.from, new Set())
+      if (!adjacencyMap.has(rel.to)) adjacencyMap.set(rel.to, new Set())
+      adjacencyMap.get(rel.from).add(rel.to)
+      adjacencyMap.get(rel.to).add(rel.from)
     })
-    this._adjacency = adjacency
+    this.adjacencyMap = adjacencyMap
 
     // UI state init
     this._highlightId = null
@@ -39,8 +39,8 @@ export class HighlightManager {
   }
 
   destroy() {
-    this._cleanupFns.forEach((fn) => { try { fn() } catch {} })
-    this._cleanupFns = []
+    this.cleanupHandlers.forEach((fn) => { try { fn() } catch {} })
+    this.cleanupHandlers = []
   }
 
   setDepth(eventOrValue) {
@@ -53,72 +53,72 @@ export class HighlightManager {
   }
 
   _syncDepthButtons() {
-    if (!this.depthControlsEl) return
-    const btns = this.depthControlsEl.querySelectorAll('[data-erd-depth]')
-    btns.forEach((btn) => {
-      const depthVal = btn.getAttribute('data-erd-depth')
+    if (!this.depthControlsElement) return
+    const buttons = this.depthControlsElement.querySelectorAll('[data-erd-depth]')
+    buttons.forEach((button) => {
+      const depthVal = button.getAttribute('data-erd-depth')
       if ((this._highlightDepth || '1') === depthVal) {
-        btn.classList.add('bg-red-600', 'text-white')
-        btn.classList.remove('text-gray-700', 'hover:bg-gray-50')
+        button.classList.add('bg-red-600', 'text-white')
+        button.classList.remove('text-gray-700', 'hover:bg-gray-50')
       } else {
-        btn.classList.remove('bg-red-600', 'text-white')
-        btn.classList.add('text-gray-700', 'hover:bg-gray-50')
+        button.classList.remove('bg-red-600', 'text-white')
+        button.classList.add('text-gray-700', 'hover:bg-gray-50')
       }
     })
   }
 
   _reachableFrom(startId) {
     const depthLimit = this._highlightDepth === 'all' ? Infinity : (parseInt(this._highlightDepth || '1', 10) || 1)
-    const visited = new Set([startId])
-    const q = [{ id: startId, depth: 0 }]
-    while (q.length) {
-      const { id, depth } = q.shift()
+    const visitedIds = new Set([startId])
+    const queue = [{ id: startId, depth: 0 }]
+    while (queue.length) {
+      const { id, depth } = queue.shift()
       if (depth >= depthLimit) continue
-      const neigh = this._adjacency.get(id) || new Set()
-      neigh.forEach((n) => {
-        if (!visited.has(n)) { visited.add(n); q.push({ id: n, depth: depth + 1 }) }
+      const neighbors = this.adjacencyMap.get(id) || new Set()
+      neighbors.forEach((neighborId) => {
+        if (!visitedIds.has(neighborId)) { visitedIds.add(neighborId); queue.push({ id: neighborId, depth: depth + 1 }) }
       })
     }
-    return visited
+    return visitedIds
   }
 
   _applyHighlight(startId) {
     if (!startId) {
-      this.gTable.classed("dimmed", false)
-      this.gTable.classed("selected", false)
-      this.linkObjs.forEach((L) => {
-        L.p.classed("dimmed", false)
-        L.sLab.classed("dimmed", false)
-        L.eLab.classed("dimmed", false)
+      this.tableSelection.classed("dimmed", false)
+      this.tableSelection.classed("selected", false)
+      this.linkObjects.forEach((link) => {
+        link.p.classed("dimmed", false)
+        link.sLab.classed("dimmed", false)
+        link.eLab.classed("dimmed", false)
       })
       return
     }
     const keep = this._reachableFrom(startId)
-    this.gTable.classed("dimmed", (d) => !keep.has(d.id))
-    this.gTable.classed("selected", (d) => d.id === startId)
-    this.linkObjs.forEach((L) => {
-      const onPath = keep.has(L.from) && keep.has(L.to)
-      L.p.classed("dimmed", !onPath)
-      L.sLab.classed("dimmed", !onPath)
-      L.eLab.classed("dimmed", !onPath)
+    this.tableSelection.classed("dimmed", (d) => !keep.has(d.id))
+    this.tableSelection.classed("selected", (d) => d.id === startId)
+    this.linkObjects.forEach((link) => {
+      const onPath = keep.has(link.from) && keep.has(link.to)
+      link.p.classed("dimmed", !onPath)
+      link.sLab.classed("dimmed", !onPath)
+      link.eLab.classed("dimmed", !onPath)
     })
   }
 
   _attachPointerHandlers() {
-    const CLICK_EPS = 5
+    const CLICK_MOVE_THRESHOLD_PX = 5
     this._pendingTap = null
 
-    const down = (event, d) => {
+    const handlePointerDown = (event, d) => {
       if (event.button !== 0) return
       this._pendingTap = { x: event.clientX, y: event.clientY, id: d.id, moved: false }
     }
-    const move = (event) => {
+    const handlePointerMove = (event) => {
       if (!this._pendingTap) return
       const dx = event.clientX - this._pendingTap.x
       const dy = event.clientY - this._pendingTap.y
-      if (Math.hypot(dx, dy) > CLICK_EPS) this._pendingTap.moved = true
+      if (Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD_PX) this._pendingTap.moved = true
     }
-    const up = (event) => {
+    const handlePointerUp = (event) => {
       if (!this._pendingTap) return
       const wasDrag = this._pendingTap.moved
       const id = this._pendingTap.id
@@ -132,17 +132,17 @@ export class HighlightManager {
         this._applyHighlight(id)
       }
     }
-    const cancel = () => { this._pendingTap = null }
+    const handlePointerCancel = () => { this._pendingTap = null }
 
-    this.gTable
-      .on("pointerdown.highlight", down)
-      .on("pointermove.highlight", move)
-      .on("pointerup.highlight", up)
-      .on("pointercancel.highlight", cancel)
+    this.tableSelection
+      .on("pointerdown.highlight", handlePointerDown)
+      .on("pointermove.highlight", handlePointerMove)
+      .on("pointerup.highlight", handlePointerUp)
+      .on("pointercancel.highlight", handlePointerCancel)
 
     // Cleanup handler to remove listeners if needed
-    this._cleanupFns.push(() => {
-      this.gTable
+    this.cleanupHandlers.push(() => {
+      this.tableSelection
         .on("pointerdown.highlight", null)
         .on("pointermove.highlight", null)
         .on("pointerup.highlight", null)
@@ -158,7 +158,7 @@ export class HighlightManager {
       }
     }
     d3.select(this.svgElement).on("click.highlightReset", handler)
-    this._cleanupFns.push(() => d3.select(this.svgElement).on("click.highlightReset", null))
+    this.cleanupHandlers.push(() => d3.select(this.svgElement).on("click.highlightReset", null))
   }
 }
 
