@@ -9,13 +9,11 @@ export class CanvasManager {
   }
 
   initialize() {
-    // Create initial layers
     this.c.root = d3.select(this.c.svgTarget).append("g")
     this.c.linkLayer = this.c.root.append("g")
     this.c.labelLayer = this.c.root.append("g")
     this.c.tableLayer = this.c.root.append("g")
 
-    // Initial viewport sizing
     const container = this.c.svgTarget.parentElement
     if (container) {
       const multiplier = 1
@@ -29,6 +27,10 @@ export class CanvasManager {
       container.scrollLeft = Math.max(0, (canvasWidth - container.clientWidth) / 2)
       container.scrollTop = Math.max(0, (canvasHeight - container.clientHeight) / 2)
     }
+
+    this.c.zoomManager = new ZoomManager(this.c.svgTarget, this.c.root, { minScale: 0.2, maxScale: 3 })
+    this.c.linkColorManager = new LinkColorManager()
+    this.c.layoutManager = new LayoutManager()
   }
 
   reset() {
@@ -39,21 +41,8 @@ export class CanvasManager {
     this.c.labelLayer = this.c.root.append("g")
     this.c.tableLayer = this.c.root.append("g")
 
-    if (this.c.zoomManager) {
-      this.c.zoomManager = new ZoomManager(this.c.svgTarget, this.c.root, {
-        minScale: 0.2,
-        maxScale: 3
-      })
-    }
-    if (this.c.linkColorManager) {
-      this.c.linkColorManager.reset()
-    } else {
-      this.c.linkColorManager = new LinkColorManager()
-    }
-    if (this.c.layoutManager) {
-      this.c.layoutManager = new LayoutManager()
-    } else {
-      this.c.layoutManager = new LayoutManager()
-    }
+    this.c.zoomManager = new ZoomManager(this.c.svgTarget, this.c.root, { minScale: 0.2, maxScale: 3 })
+    if (this.c.linkColorManager) this.c.linkColorManager.reset(); else this.c.linkColorManager = new LinkColorManager()
+    this.c.layoutManager = new LayoutManager()
   }
 }

@@ -5,12 +5,10 @@ export const ZOOM_FIT_PADDING = 40
 
 export const OFFSETS = {
   clickMoveThresholdPx: 5,
-  reservedBottomExtraPx: 24,
-  labelNearPx: 14
+  reservedBottomExtraPx: 24
 }
 
 export const CSS = {
-  hidden: 'hidden',
   depthActive: ['bg-red-600', 'text-white'],
   depthInactive: ['text-gray-700', 'hover:bg-gray-50'],
   compactActive: ['bg-red-600', 'text-white'],

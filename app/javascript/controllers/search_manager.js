@@ -16,7 +16,6 @@ export class SearchManager {
   }
 
   apply(query) {
-    const tables = this.controller._tables || []
     const linkObjects = this.controller._linkObjs || []
     const tableSelection = this.controller.tableLayer.selectAll('.table')
 

@@ -2,9 +2,8 @@ import * as d3 from "d3"
 import { OFFSETS, CSS } from "./constants"
 
 export class HighlightManager {
-  constructor(svgElement, tableLayerSelection) {
+  constructor(svgElement) {
     this.svgElement = svgElement
-    this.tableLayer = tableLayerSelection
     this._highlightId = null
     this._highlightDepth = '1'
     this._pendingTap = null

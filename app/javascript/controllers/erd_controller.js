@@ -31,12 +31,9 @@ export default class extends Controller {
     this.labelLayer = null
     this.tableLayer = null
 
-    this.zoomManager = new ZoomManager(this.svgTarget, d3.select(this.svgTarget).append("g"), { minScale: 0.2, maxScale: 3 })
-    this.linkColorManager = new LinkColorManager()
-    this.layoutManager = new LayoutManager()
-
     this.canvas = new CanvasManager(this)
     this.canvas.initialize()
+    this.canvas.reset()
 
     this._debounceTimer = null
 
@@ -48,8 +45,7 @@ export default class extends Controller {
     this.showEmptyState()
 
     const serverGraphJson = (this.hasInitialGraphValue && this.initialGraphValue) ? this.initialGraphValue : ""
-    if (serverGraphJson && serverGraphJson.trim() !== ""
-    ) {
+    if (serverGraphJson && serverGraphJson.trim() !== "") {
       try {
         const graph = JSON.parse(serverGraphJson)
         this.resetCanvas()
@@ -300,16 +296,6 @@ export default class extends Controller {
     this.highlightManager = new HighlightManager(this.svgTarget, this.tableLayer)
     this.highlightManager._highlightDepth = this._highlightDepth || '1'
     this.highlightManager.setup(tables, linkObjs, gTable, this.hasDepthControlsTarget ? this.depthControlsTarget : null)
-
-    if (this.hasSearchInputTarget) {
-      this.searchInputTarget.addEventListener('input', (e) => {
-        const q = (e.target.value || '').trim().toLowerCase()
-        clearTimeout(this._searchTimer)
-        this._searchTimer = setTimeout(() => {
-          this.applySearchQuery(q, tables, linkObjs)
-        }, 220)
-      })
-    }
   }
 
   onSearchInput(event) {
