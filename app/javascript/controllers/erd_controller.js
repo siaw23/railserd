@@ -11,6 +11,7 @@ import pako from "pako"
 import { createShortGraphLink, createShortSchemaLink } from "../services/share_service"
 import { PaneManager } from "./pane_manager"
 import { CompactionManager } from "./compaction_manager"
+import { SearchManager } from "./search_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
@@ -19,6 +20,7 @@ export default class extends Controller {
   connect() {
     this.pane = new PaneManager(this)
     this.compaction = new CompactionManager(this)
+    this.search = new SearchManager(this)
 
     this.root = d3.select(this.svgTarget).append("g")
     this.linkLayer = this.root.append("g")
@@ -346,21 +348,13 @@ export default class extends Controller {
 
     if (this.hasSearchInputTarget) {
       this.searchInputTarget.addEventListener('input', (e) => {
-        const q = (e.target.value || '').trim().toLowerCase()
-        clearTimeout(this._searchTimer)
-        this._searchTimer = setTimeout(() => {
-          this.applySearchQuery(q, tables, linkObjs)
-        }, 220)
+        this.search.onInput(e)
       })
     }
   }
 
   onSearchInput(event) {
-    const q = (event?.target?.value || '').trim().toLowerCase()
-    clearTimeout(this._searchTimer)
-    this._searchTimer = setTimeout(() => {
-      this.applySearchQuery(q, this._tables || [], this._linkObjs || [])
-    }, 220)
+    this.search.onInput(event)
   }
 
   setDepth(event) {
@@ -368,46 +362,6 @@ export default class extends Controller {
     const val = btn.getAttribute('data-erd-depth') || '1'
     this._highlightDepth = val
     this.highlightManager?.setDepth(val)
-  }
-
-  applySearchQuery(q, tables, linkObjs) {
-    const gTable = this.tableLayer.selectAll('.table')
-    if (!q) {
-      gTable.classed('dimmed', false)
-      linkObjs.forEach((L) => { L.p.classed('dimmed', false); L.sLab.classed('dimmed', false); L.eLab.classed('dimmed', false) })
-      if (this._searchPreviousPosition) {
-        this.zoomManager.panToPoint(this._searchPreviousPosition.x, this._searchPreviousPosition.y, {
-          animate: true,
-          duration: 450
-        })
-        this._searchPreviousPosition = null
-      }
-      return
-    }
-    const match = (this._tableByLowerId || {})[q]
-    if (!match) {
-      gTable.classed('dimmed', true)
-      linkObjs.forEach((L) => { L.p.classed('dimmed', true); L.sLab.classed('dimmed', true); L.eLab.classed('dimmed', true) })
-      return
-    }
-    gTable.classed('dimmed', (d) => d.id !== match.id)
-    linkObjs.forEach((L) => {
-      const onPath = (L.from === match.id || L.to === match.id)
-      L.p.classed('dimmed', !onPath)
-      L.sLab.classed('dimmed', !onPath)
-      L.eLab.classed('dimmed', !onPath)
-    })
-
-    if (!this._searchPreviousPosition) {
-      this._searchPreviousPosition = this.zoomManager.getCurrentCenter()
-    }
-
-    const targetCx = match.x + match.w / 2
-    const targetCy = match.y + match.h / 2
-    this.zoomManager.panToPoint(targetCx, targetCy, {
-      animate: true,
-      duration: 450
-    })
   }
 }
 
