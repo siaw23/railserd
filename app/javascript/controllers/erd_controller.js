@@ -10,6 +10,7 @@ import { LinkRenderer } from "./link_renderer"
 import pako from "pako"
 import { createShortGraphLink, createShortSchemaLink } from "../services/share_service"
 import { PaneManager } from "./pane_manager"
+import { CompactionManager } from "./compaction_manager"
 
 export default class extends Controller {
   static targets = ["input", "svg", "emptyState", "leftPane", "rightPane", "toggleButton", "panelLeftIcon", "panelRightIcon", "depthControls", "searchInput", "compactButton", "toast"]
@@ -17,6 +18,7 @@ export default class extends Controller {
 
   connect() {
     this.pane = new PaneManager(this)
+    this.compaction = new CompactionManager(this)
 
     this.root = d3.select(this.svgTarget).append("g")
     this.linkLayer = this.root.append("g")
@@ -201,66 +203,7 @@ export default class extends Controller {
   }
 
   toggleCompactTables() {
-    this._isCompact = !this._isCompact
-    if (this.hasCompactButtonTarget) {
-      const btn = this.compactButtonTarget
-      btn.classList.toggle('bg-red-600', this._isCompact)
-      btn.classList.toggle('text-white', this._isCompact)
-      btn.classList.toggle('text-gray-700', !this._isCompact)
-      btn.classList.toggle('hover:bg-gray-50', !this._isCompact)
-      btn.classList.toggle('hover:bg-red-700', this._isCompact)
-    }
-    const gTable = this.tableLayer.selectAll('.table')
-    const DURATION = 260
-    const self = this
-    gTable.each(function(d) {
-      const g = d3.select(this)
-      const extras = g.selectAll('[data-extra="1"]')
-      const outline = g.select('rect.table-outline')
-      const rowsCount = d.fields.length
-      const fullHeight = d.fullH
-      const compactHeight = d.compactH
-      const targetHeight = self._isCompact ? compactHeight : fullHeight
-      // animate outline height and keep links in sync by updating d.h during tween
-      const startHeight = typeof d.h === 'number' ? d.h : +outline.attr('height') || fullHeight
-      const trans = outline.transition().duration(DURATION).attr('height', targetHeight)
-      trans.tween('relink', function() {
-        let rafPending = false
-        return function(t) {
-          d.h = startHeight + (targetHeight - startHeight) * t
-          if (!rafPending) {
-            rafPending = true
-            requestAnimationFrame(() => {
-              rafPending = false
-              if (self._updateLinks) self._updateLinks()
-            })
-          }
-        }
-      }).on('end', function() {
-        d.h = targetHeight
-        if (self._updateLinks) self._updateLinks()
-      })
-      const header = g.select('path.header')
-      const roundedTopRectPath = (width, height, r) => {
-        const w = width; const h = height; const rr = Math.min(r, w / 2, h); return `M0,${rr} Q0,0 ${rr},0 H${w - rr} Q${w},0 ${w},${rr} V${h} H0 Z`
-      }
-      header.transition().duration(DURATION).attrTween('d', function() {
-        const width = d.w
-        const start = header.attr('d')
-        const end = roundedTopRectPath(width, self._HDR_H, 8)
-        return () => end
-      })
-
-      if (extras.empty()) return
-      if (self._isCompact) {
-        extras.transition().duration(DURATION).attr('opacity', 0).on('end', function() { d3.select(this).style('display', 'none') })
-      } else {
-        extras.style('display', null).transition().duration(DURATION).attr('opacity', 1)
-      }
-    })
-
-    // After batch resizing kicked off, perform a final reflow
-    if (this._updateLinks) this._updateLinks()
+    this.compaction.toggle()
   }
 
   clear(showEmpty = true) {
@@ -324,13 +267,13 @@ export default class extends Controller {
 
     this.hideEmptyState()
 
-    this._isCompact = this._isCompact ?? false
+    const isCompact = this.compaction ? this.compaction.isCompact : false
     const measurer = createSvgTextMeasurer(this.svgTarget)
     const { PADX, ROW_H, HDR_H } = applyTableDimensions(
       tables,
       measurer.measureTextWidth,
       DEFAULT_GEOMETRY,
-      this._isCompact
+      isCompact
     )
     this._ROW_H = ROW_H; this._HDR_H = HDR_H
     measurer.destroy()
@@ -401,6 +344,15 @@ export default class extends Controller {
     this.highlightManager._highlightDepth = this._highlightDepth || '1'
     this.highlightManager.setup(tables, linkObjs, gTable, this.hasDepthControlsTarget ? this.depthControlsTarget : null)
 
+    if (this.hasSearchInputTarget) {
+      this.searchInputTarget.addEventListener('input', (e) => {
+        const q = (e.target.value || '').trim().toLowerCase()
+        clearTimeout(this._searchTimer)
+        this._searchTimer = setTimeout(() => {
+          this.applySearchQuery(q, tables, linkObjs)
+        }, 220)
+      })
+    }
   }
 
   onSearchInput(event) {
