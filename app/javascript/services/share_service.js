@@ -3,13 +3,7 @@ import pako from "pako"
 function base64url(bytes) {
   let bin = ''
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
-  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
-}
-
-export function encodeCompressedGraph(graph) {
-  const jsonBytes = new TextEncoder().encode(JSON.stringify(graph))
-  const deflated = pako.deflateRaw(jsonBytes, { level: 9 })
-  return base64url(deflated)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 export function encodeGraphSnapshot(graph, schema) {
