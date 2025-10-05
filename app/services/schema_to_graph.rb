@@ -78,10 +78,14 @@ class SchemaToGraph
       line = raw.strip
       next if line.empty?
 
-      if m = line.match(/^create_table\s+\"([^\"]+)\"/)
+      if m = line.match(/^create_table\s+\"([^\"]+)\"\s+do\s*\|\s*([a-zA-Z_]\w*)\s*\|/)
         current_table = m[1]
         @tables[current_table] ||= { columns: [] }
         next
+      elsif line.match(/^create_table\s+\"([^\"]+)\"\s+do(?!.*\|)/)
+        raise ArgumentError, "create_table must use block variable, e.g., do |t|"
+      elsif line.match(/^create_table\s+\"([^\"]+)\"$/)
+        raise ArgumentError, "create_table requires a block: create_table \"name\" do |t| ... end"
       end
 
       if current_table
