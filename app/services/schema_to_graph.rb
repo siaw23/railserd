@@ -58,7 +58,7 @@ class SchemaToGraph
 
   def evaluate_schema!
     require "active_support/core_ext/string/inflections"
-    shim = Shim.new(@tables, @fks)
+    shim = Shim.new(@tables, @fks, @unique_fk_cols)
     sanitized = sanitize_schema(@schema_rb.to_s)
     code = <<~RUBY
       module ActiveRecord; module Schema; end; end
@@ -100,6 +100,10 @@ class SchemaToGraph
           when 'references', 'belongs_to'
             @tables[current_table][:columns] << { name: "#{col}_id", type: 'int' }
             @fks << { from: current_table, to: col.pluralize, column: "#{col}_id" } if line.include?('foreign_key: true')
+            # Detect inline unique index declaration on references
+            if line.match(/index:\s*\{[^}]*unique:\s*true[^}]*\}/)
+              @unique_fk_cols << [current_table, "#{col}_id"]
+            end
           when 'timestamps'
             @tables[current_table][:columns] << { name: 'created_at', type: 'datetime' }
             @tables[current_table][:columns] << { name: 'updated_at', type: 'datetime' }
@@ -114,15 +118,21 @@ class SchemaToGraph
         if line.match(/^t\.index\s+/) && line.include?("unique: true")
           # Try to extract bracket list first
           if (mb = line.match(/\[(.*?)\]/))
-            cols = mb[1].scan(/\"([^\"]+)\"/).flatten
-            if cols.length == 1
-              @unique_fk_cols << [current_table, cols.first]
+            # accept either strings or symbols
+            cols_str = mb[1].scan(/\"([^\"]+)\"/).flatten
+            cols_sym = mb[1].scan(/:([a-zA-Z_]\w*)/).flatten
+            if cols_str.length == 1
+              @unique_fk_cols << [current_table, cols_str.first]
+              next
+            elsif cols_sym.length == 1
+              @unique_fk_cols << [current_table, cols_sym.first]
               next
             end
           end
-          # Fallback to single string argument form
-          if (m1 = line.match(/^t\.index\s+\"([^\"]+)\"/))
-            @unique_fk_cols << [current_table, m1[1]]
+          # Fallback to single argument (string or symbol)
+          if (m1 = line.match(/^t\.index\s+(?::([a-zA-Z_]\w*)|\"([^\"]+)\")/))
+            colname = m1[1] || m1[2]
+            @unique_fk_cols << [current_table, colname]
             next
           end
           next
@@ -137,16 +147,21 @@ class SchemaToGraph
       # Capture add_index ... unique: true outside table blocks
       # add_index table, ..., unique: true (ignore composite arrays unless single col)
       if line.match(/^add_index\s+/) && line.include?("unique: true")
-        if (mb = line.match(/^add_index\s+\"([^\"]+)\",\s*\[(.*?)\]/))
-          tbl = mb[1]
-          cols = mb[2].scan(/\"([^\"]+)\"/).flatten
-          if cols.length == 1
-            @unique_fk_cols << [tbl, cols.first]
+        # add_index "table", [ ... ]
+        if (mb = line.match(/^add_index\s+(?:\"([^\"]+)\"|:([a-zA-Z_]\w*)),\s*\[(.*?)\]/))
+          tbl = mb[1] || mb[2]
+          cols_str = mb[3].scan(/\"([^\"]+)\"/).flatten
+          cols_sym = mb[3].scan(/:([a-zA-Z_]\w*)/).flatten
+          if cols_str.length == 1
+            @unique_fk_cols << [tbl, cols_str.first]
+          elsif cols_sym.length == 1
+            @unique_fk_cols << [tbl, cols_sym.first]
           end
           next
-        elsif (m = line.match(/^add_index\s+\"([^\"]+)\",\s*\"([^\"]+)\"/))
-          tbl = m[1]
-          col = m[2]
+        # add_index "table", "col" or add_index :table, :col
+        elsif (m = line.match(/^add_index\s+(?:\"([^\"]+)\"|:([a-zA-Z_]\w*)),\s*(?:\"([^\"]+)\"|:([a-zA-Z_]\w*))/))
+          tbl = m[1] || m[2]
+          col = m[3] || m[4]
           @unique_fk_cols << [tbl, col]
           next
         end
@@ -302,7 +317,7 @@ class SchemaToGraph
 
   # The DSL shim that captures create_table/t.*/add_foreign_key
   class Shim
-    def initialize(tables, fks) = (@tables, @fks = tables, fks)
+    def initialize(tables, fks, unique) = (@tables, @fks, @unique = tables, fks, unique)
 
     def dsl
       <<~RUBY
@@ -366,6 +381,11 @@ class SchemaToGraph
             if opts[:foreign_key]
               $__ERD_FKS__ << { from: @name, to: name.to_s.pluralize, column: "#{name}_id" }
             end
+            # Capture inline unique index on references
+            idx = opts[:index]
+            if (idx.is_a?(Hash) && (idx[:unique] || idx['unique'])) || idx == { unique: true }
+              $__ERD_UNIQUE__ << [@name, "#{name}_id"]
+            end
           end
           alias belongs_to references
 
@@ -382,6 +402,7 @@ class SchemaToGraph
 
         $__ERD_TABLES__ = ObjectSpace._id2ref(#{@tables.object_id})
         $__ERD_FKS__    = ObjectSpace._id2ref(#{@fks.object_id})
+        $__ERD_UNIQUE__ = ObjectSpace._id2ref(#{@unique.object_id})
       RUBY
     end
   end
