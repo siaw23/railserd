@@ -45,7 +45,7 @@ document.addEventListener("turbo:load", () => {
 # +----------------------------------------------+
 #
 # This app uses no database and does not store your schema.
-# No sessions. Shared links are cached for 72 hours.
+# No sessions. Shared links are cached for 48 hours.
 # Your schema.rb remains private.
 #
 # Tips:

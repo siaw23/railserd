@@ -8,7 +8,7 @@ import { DEFAULT_GEOMETRY, createSvgTextMeasurer, applyTableDimensions, computeB
 import { TableRenderer } from "./table_renderer"
 import { LinkRenderer } from "./link_renderer"
 import pako from "pako"
-import { createShortGraphLink, createShortSchemaLink } from "../services/share_service"
+import { createShortGraphLink } from "../services/share_service"
 import { PaneManager } from "./pane_manager"
 import { CompactionManager } from "./compaction_manager"
 import { SearchManager } from "./search_manager"
@@ -119,21 +119,6 @@ export default class extends Controller {
     } catch (e) {
       console.error('Failed to share graph', e)
       alert('Failed to generate share link.')
-    }
-  }
-
-  shareSchema = async () => {
-    const schema = this.hasInputTarget ? this.inputTarget.value : ''
-    if (!schema || !schema.trim()) {
-      alert('No schema to share. Please add your schema first.')
-      return
-    }
-    try {
-      const url = await createShortSchemaLink(schema, this.csrfToken())
-      this.copyLink(url)
-    } catch (e) {
-      console.error('Failed to generate schema link', e)
-      alert('Failed to generate schema share link.')
     }
   }
 
