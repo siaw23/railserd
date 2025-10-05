@@ -1,8 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
 import * as d3 from "d3"
-import { ZoomManager } from "./zoom_manager"
-import { LinkColorManager } from "./link_color_manager"
-import { LayoutManager } from "./layout_manager"
 import { HighlightManager } from "./highlight_manager"
 import { DEFAULT_GEOMETRY, createSvgTextMeasurer, applyTableDimensions, computeBoundsFromTables } from "./geometry"
 import { TableRenderer } from "./table_renderer"
