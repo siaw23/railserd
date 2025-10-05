@@ -1,43 +1,32 @@
 import pako from "pako"
 
-function base64urlFromBytes(uint8) {
+function base64url(bytes) {
   let bin = ''
-  for (let i = 0; i < uint8.length; i++) bin += String.fromCharCode(uint8[i])
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
 }
 
 export function encodeCompressedGraph(graph) {
   const jsonBytes = new TextEncoder().encode(JSON.stringify(graph))
   const deflated = pako.deflateRaw(jsonBytes, { level: 9 })
-  return base64urlFromBytes(deflated)
+  return base64url(deflated)
 }
 
-export function encodeCompressedSchema(schema) {
-  const bytes = new TextEncoder().encode(schema)
-  const deflated = pako.deflateRaw(bytes, { level: 9 })
-  return base64urlFromBytes(deflated)
+export function encodeGraphSnapshot(graph, schema) {
+  const snapshot = { graph, schema: schema || '' }
+  const jsonBytes = new TextEncoder().encode(JSON.stringify(snapshot))
+  const deflated = pako.deflateRaw(jsonBytes, { level: 9 })
+  return base64url(deflated)
 }
 
-export async function createShortGraphLink(graph, csrfToken) {
-  const payload = encodeCompressedGraph(graph)
+export async function createShortGraphLink(graph, csrfToken, schema) {
+  const payload = encodeGraphSnapshot(graph, schema)
   const res = await fetch('/erd/shorten', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrfToken },
     body: JSON.stringify({ payload })
   })
   if (!res.ok) throw new Error('shorten failed')
-  const j = await res.json()
-  return j.url
-}
-
-export async function createShortSchemaLink(schema, csrfToken) {
-  const payload = encodeCompressedSchema(schema)
-  const res = await fetch('/erd/shorten_schema', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': csrfToken },
-    body: JSON.stringify({ payload })
-  })
-  if (!res.ok) throw new Error('shorten_schema failed')
   const j = await res.json()
   return j.url
 }

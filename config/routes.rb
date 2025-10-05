@@ -15,6 +15,4 @@ Rails.application.routes.draw do
   post "/erd/parse", to: "erd#parse"
   post "/erd/shorten", to: "erd#shorten"
   get  "/g/:code", to: "erd#go", as: :erd_short
-  post "/erd/shorten_schema", to: "erd#shorten_schema"
-  get  "/s/:code", to: "erd#schema", as: :erd_schema_short
 end

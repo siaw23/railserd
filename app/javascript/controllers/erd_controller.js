@@ -113,7 +113,8 @@ export default class extends Controller {
   shareGraph = async () => {
     try {
       const graph = this.captureCurrentGraph()
-      const url = await createShortGraphLink(graph, this.csrfToken())
+      const schema = this.hasInputTarget ? this.inputTarget.value : ''
+      const url = await createShortGraphLink(graph, this.csrfToken(), schema)
       this.copyLink(url)
     } catch (e) {
       console.error('Failed to share graph', e)

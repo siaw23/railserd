@@ -126,7 +126,15 @@ ActiveRecord::Schema.define(version: ${version}) do
 
 end`
 
-  const initialValue = (textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample
+  const root = document.querySelector('[data-controller="erd"]')
+  const hasInitialGraph = !!(root && (root.getAttribute('data-erd-initial-graph-value') || '').trim())
+  const hasServerSchema = !!(textarea && (textarea.value || '').trim().length > 0)
+
+  // If a snapshot exists and the server sent schema show it, otherwise keep blank
+  const initialValue = hasInitialGraph
+    ? (hasServerSchema ? textarea.value : "")
+    : ((textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample)
+
   const editor = monaco.editor.create(container, {
     value: initialValue,
     language: "ruby",
@@ -141,13 +149,11 @@ end`
     tabSize: 2
   })
 
-  // Place cursor at the end but keep scroll at the top on load
   const model = editor.getModel()
   if (model) {
     const lineNumber = model.getLineCount()
     const column = model.getLineMaxColumn(lineNumber)
     editor.setPosition({ lineNumber, column })
-    // Keep initial scroll at the very top to show content from the beginning
     requestAnimationFrame(() => {
       try { editor.setScrollTop(0) } catch {}
     })
@@ -155,10 +161,17 @@ end`
 
   const syncToTextarea = () => {
     textarea.value = editor.getValue()
-    // Fire input event so Stimulus debouncedParse runs (live preview)
     textarea.dispatchEvent(new Event("input", { bubbles: true }))
   }
   editor.onDidChangeModelContent(syncToTextarea)
-  // Kick off initial render
-  syncToTextarea()
+
+  if (hasInitialGraph) {
+    // If no server schema was provided, clear any browser-restored content
+    if (!hasServerSchema) {
+      try { textarea.value = "" } catch {}
+    }
+    // Do not kick off an initial parse cuz server already rendered the graph
+  } else {
+    syncToTextarea()
+  }
 })
