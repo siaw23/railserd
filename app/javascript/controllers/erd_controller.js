@@ -65,6 +65,30 @@ export default class extends Controller {
         }
       } catch (_) {}
     }
+
+    // fallbacks
+    const tryInitialParse = () => {
+      try {
+        const hasText = this.hasInputTarget && (this.inputTarget.value || '').trim().length > 0
+        const nothingRendered = !this._tables || this._tables.length === 0
+        if (hasText && nothingRendered) {
+          this.debouncedParse()
+          this.pane.expand(true)
+          return true
+        }
+      } catch (_) {}
+      return false
+    }
+
+    if (!tryInitialParse()) {
+      let attempts = 0
+      const maxAttempts = 20 // ~2s at 100ms
+      const timer = setInterval(() => {
+        if (tryInitialParse() || ++attempts >= maxAttempts) {
+          clearInterval(timer)
+        }
+      }, 100)
+    }
   }
 
   zoomBy(factor) { this.zoomManager.zoomBy(factor) }
