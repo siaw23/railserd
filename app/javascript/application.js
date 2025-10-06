@@ -1,7 +1,7 @@
 import "@hotwired/turbo-rails"
 import "./controllers"
 import { createIcons, FileText, Plus, Minus, Github, Share } from "lucide"
-import * as monaco from "monaco-editor"
+
 
 function currentSchemaVersion() {
   const n = new Date()
@@ -21,16 +21,6 @@ document.addEventListener("turbo:load", () => {
   const leftPane = document.querySelector('[data-erd-target="leftPane"]')
   const textarea = leftPane && leftPane.querySelector('[data-erd-target="input"]')
   if (!leftPane || !textarea) return
-
-  const container = document.createElement("div")
-  container.style.position = "absolute"
-  container.style.inset = "0px"
-  container.style.height = "100%"
-  container.style.width = "100%"
-  const parent = textarea.parentElement
-  parent.style.position = "relative"
-  parent.appendChild(container)
-  textarea.style.display = "none"
 
   // Default monospace stack
   const fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
@@ -130,48 +120,70 @@ end`
   const hasInitialGraph = !!(root && (root.getAttribute('data-erd-initial-graph-value') || '').trim())
   const hasServerSchema = !!(textarea && (textarea.value || '').trim().length > 0)
 
-  // If a snapshot exists and the server sent schema show it, otherwise keep blank
-  const initialValue = hasInitialGraph
-    ? (hasServerSchema ? textarea.value : "")
-    : ((textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample)
+  if (!hasInitialGraph && !hasServerSchema && (!textarea.value || textarea.value.trim().length === 0)) {
+    try { textarea.value = defaultSample } catch {}
+  }
 
-  const editor = monaco.editor.create(container, {
-    value: initialValue,
-    language: "ruby",
-    theme: "vs-dark",
-    fontFamily: fontFamily,
-    fontSize: 13,
-    lineHeight: 22,
-    minimap: { enabled: false },
-    wordWrap: "on",
-    automaticLayout: true,
-    scrollBeyondLastLine: false,
-    tabSize: 2
-  })
+  const initializeMonaco = (monaco) => {
+    const container = document.createElement("div")
+    container.style.position = "absolute"
+    container.style.inset = "0px"
+    container.style.height = "100%"
+    container.style.width = "100%"
+    const parent = textarea.parentElement
+    parent.style.position = "relative"
+    parent.appendChild(container)
 
-  const model = editor.getModel()
-  if (model) {
-    const lineNumber = model.getLineCount()
-    const column = model.getLineMaxColumn(lineNumber)
-    editor.setPosition({ lineNumber, column })
-    requestAnimationFrame(() => {
-      try { editor.setScrollTop(0) } catch {}
+    const initialValue = hasInitialGraph
+      ? (hasServerSchema ? textarea.value : "")
+      : ((textarea.value && textarea.value.trim().length > 0) ? textarea.value : defaultSample)
+
+    textarea.style.display = "none"
+
+    const editor = monaco.editor.create(container, {
+      value: initialValue,
+      language: "ruby",
+      theme: "vs-dark",
+      fontFamily: fontFamily,
+      fontSize: 13,
+      lineHeight: 22,
+      minimap: { enabled: false },
+      wordWrap: "on",
+      automaticLayout: true,
+      scrollBeyondLastLine: false,
+      tabSize: 2
     })
-  }
 
-  const syncToTextarea = () => {
-    textarea.value = editor.getValue()
-    textarea.dispatchEvent(new Event("input", { bubbles: true }))
-  }
-  editor.onDidChangeModelContent(syncToTextarea)
-
-  if (hasInitialGraph) {
-    // If no server schema was provided, clear any browser-restored content
-    if (!hasServerSchema) {
-      try { textarea.value = "" } catch {}
+    const model = editor.getModel()
+    if (model) {
+      const lineNumber = model.getLineCount()
+      const column = model.getLineMaxColumn(lineNumber)
+      editor.setPosition({ lineNumber, column })
+      requestAnimationFrame(() => {
+        try { editor.setScrollTop(0) } catch {}
+      })
     }
-    // Do not kick off an initial parse cuz server already rendered the graph
+
+    const syncToTextarea = () => {
+      textarea.value = editor.getValue()
+      textarea.dispatchEvent(new Event("input", { bubbles: true }))
+    }
+    editor.onDidChangeModelContent(syncToTextarea)
+
+    if (hasInitialGraph) {
+      if (!hasServerSchema) {
+        try { textarea.value = "" } catch {}
+      }
+    } else {
+      syncToTextarea()
+    }
+  }
+
+  const loadMonaco = () => import("monaco-editor").then(m => initializeMonaco(m)).catch(() => {})
+
+  if ("requestIdleCallback" in window) {
+    try { requestIdleCallback(() => loadMonaco(), { timeout: 1000 }) } catch { setTimeout(loadMonaco, 0) }
   } else {
-    syncToTextarea()
+    setTimeout(loadMonaco, 0)
   }
 })
