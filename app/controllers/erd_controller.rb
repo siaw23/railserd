@@ -68,13 +68,6 @@ class ErdController < ApplicationController
   def default_sample_schema
     version = Time.now.strftime("%Y_%m_%d_%H%M%S")
     <<~RUBY
-      # +----------------------------------------------+
-      # | Senior Ruby on Rails Consultant.             |
-      # | 11 years of experience.                      |
-      # | Open to freelance & contract engagements.    |
-      # | Let's talk: mensah.consultancy@gmail.com     |
-      # | X | LinkedIn | Github | YouTube: siaw23      |
-      # +----------------------------------------------+
       #
       # This app uses no database and does not store your schema.
       # No sessions. Shared links are cached for 48 hours.

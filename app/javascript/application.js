@@ -26,14 +26,7 @@ document.addEventListener("turbo:load", () => {
   const fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace'
 
   const version = currentSchemaVersion()
-  const defaultSample = `# +----------------------------------------------+
-# | Senior Ruby on Rails Consultant.             |
-# | 11 years of experience.                      |
-# | Open to freelance & contract engagements.    |
-# | Let's talk: mensah.consultancy@gmail.com     |
-# | X | LinkedIn | Github | YouTube: siaw23      |
-# +----------------------------------------------+
-#
+  const defaultSample = `#
 # This app uses no database and does not store your schema.
 # No sessions. Shared links are cached for 48 hours.
 # Your schema.rb remains private.
